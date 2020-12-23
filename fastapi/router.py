@@ -1,8 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from common.ResponseModel import ResponseModel
+from common.DatabaseManager import DatabaseManager
+from common.FileManager import FileManager
 from http import HTTPStatus
+import time
 
 router = APIRouter()
+dbManager = DatabaseManager()
+fileManager = FileManager()
 
 # facebook기준 ep, feed 명칭으로 통일함
 
@@ -13,18 +18,25 @@ async def home():
 
 # error test
 @router.get('/error')
-async def error():
+async def error():    
     raise HTTPException(status_code=400) # exception발생
 
 # 카탈로그 config 확인
-@router.get('/config/{catalog_id}')
-async def get_catalog_config():
-    return {'message': 'get_catalog_config'}
+@router.get('/config', status_code=HTTPStatus.OK)
+async def getCatalogConfigs():
+    data = dbManager.findConfig()
+    return ResponseModel(data=data)
+
+@router.get('/config/{catalog_id}', status_code=HTTPStatus.OK)
+async def getCatalogConfig(catalog_id):
+    data = dbManager.findConfig(catalog_id)    
+    return ResponseModel(data=data)
 
 # ep 정보 확인
 @router.get('/ep/info/{catalog_id}')
-async def get_ep_info():
-    return {'message': 'get_ep_info'}
+async def getEpInfo(catalog_id):
+    data = fileManager.getInfo(catalog_id)
+    return ResponseModel(data=data)
 
 # ep 다운로드
 @router.get('/ep/download/{catalog_id}')

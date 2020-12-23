@@ -4,23 +4,24 @@ from http import HTTPStatus as ststus
 from starlette.responses import JSONResponse
 import datetime
 
-class ResponseModel():    
+class ResponseModel():
     statusCode: int
     statusName: str
     message: str
     data: dict
-    datetime: str
+    duration : str # 처리시간(ms)
+    datetime: str # 출력시간
     def __init__(self, statusCode=200, statusName="OK", message=None, data=None):
         self.statusCode = statusCode
         self.statusName = statusName
         self.message = message
-        self.data = data
+        self.data = data    
         self.datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    def getJson(self):
+    def get(self):
         return JSONResponse({"statusCode":self.statusCode,
                              "statusName":self.statusName,
                              "message":self.message,
-                             "data":self.data,
-                             "datetime":self.datetime},
+                             "datetime":self.datetime,
+                             "data":self.data},
                              status_code=self.statusCode)
