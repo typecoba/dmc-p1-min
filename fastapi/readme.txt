@@ -1,2 +1,1 @@
-실행 
-uvicorn main:app --reload
+main.py 실행

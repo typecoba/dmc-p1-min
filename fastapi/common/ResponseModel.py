@@ -9,13 +9,14 @@ class ResponseModel():
     statusName: str
     message: str
     data: any
-    datetime: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 출력시간            
+    datetime: str
 
     def __init__(self, statusCode=200, statusName="OK", message=None, data=None):
         self.statusCode = statusCode
         self.statusName = statusName
         self.message = message
         self.data = data
+        self.datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 출력시간
 
     def get(self):
         return JSONResponse({"statusCode":self.statusCode,

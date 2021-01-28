@@ -2,6 +2,11 @@ from urllib import request
 import os
 from datetime import datetime 
 import shutil
+
+import asyncio
+import aiohttp
+import aiofiles
+
 from starlette.config import Config
 from fastapi import HTTPException
 
@@ -44,7 +49,8 @@ class FileService():
     url이 기본이지만 local file등과같은 경우도 처리
     '''    
     async def download(self, originalPath, downloadPath):    
-        if ('http://' in originalPath) == False : # url이 아닌 경우
+
+        if ('http://' in originalPath) == False : # url이 아닌 경우            
             shutil.copy(originalPath, downloadPath) # 로컬파일 복사
 
         else : # url 경로            
@@ -65,3 +71,18 @@ class FileService():
     # 파일이 없으면 첫부분정도만 확인할수 있나?
     # 파일이 있으면 중간부터 확인할 수 있나?
     # def getEpDetail():
+
+
+    # aiofile test
+    # file 읽기, 쓰기에 멀티프로세스 사용해야 함..
+    async def aDownload(self, fromPath, toPath):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(fromPath) as resp:                
+                async with aiofiles.open(toPath, 'w', encoding='utf-8') as f:
+                    await f.write(await resp.text())
+                    f.close()
+        
+        
+        
+            
+

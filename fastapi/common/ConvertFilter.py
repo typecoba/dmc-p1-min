@@ -23,11 +23,11 @@ class ConvertFilter():
 
         
     def commonFilter(self, dataframe):
-        # field {'a':'b'}  ep 'a' to feed 'b'
+        # columns {'a':'b'}  ep 'a' to feed 'b'
         
-        keys = list(self.catalogConfig['field'].keys())
+        keys = list(self.catalogConfig['columns'].keys())
         self.result = dataframe[keys] # 필요컬럼만 추출                
-        self.result.rename(columns= self.catalogConfig['field'], inplace=True) # key 수정    
+        self.result.rename(columns= self.catalogConfig['columns'], inplace=True) # key 수정    
 
         if ('custom' in self.catalogConfig) == False : 
             pass

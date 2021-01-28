@@ -19,7 +19,7 @@ class ConvertProcess():
         self.fileService = FileService() # 파일 매니저 클래스
 
     # download - epLoad - convert - feedWrite - feedUpload
-    async def execute(self):
+    def execute(self):
         # data download
         # self.fileService.download(self.catalogConfig['ep']['url'], self.catalogConfig['ep']['fullPath'])
         
@@ -57,7 +57,7 @@ class ConvertProcess():
         # title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
         # 컬럼 정리를 위해 원본 columns 리스트를 세팅해 chunk
         columns = pd.read_csv(self.catalogConfig['ep']['fullPath'],
-                                nrows=1,                                
+                                nrows=1, #한줄만 읽음                                
                                 sep=self.catalogConfig['ep']['sep'],
                                 lineterminator='\n',                                
                                 encoding=self.catalogConfig['ep']['encoding'])

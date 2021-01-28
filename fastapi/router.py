@@ -8,6 +8,7 @@ from starlette.config import Config
 from starlette.responses import FileResponse
 import time
 import os
+import asyncio
 
 router = APIRouter()
 configRepository = ConfigRepository()
@@ -68,6 +69,7 @@ async def getEpExport(catalog_id):
 async def getDownload(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
     await fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
+    # await fileService.aDownload(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
     return ResponseModel(message='download complete')    
 
 # ep 내용확인
@@ -80,7 +82,7 @@ async def getDownload(catalog_id):
 async def getEpConvert2feed(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)    
     convertProcess = ConvertProcess(catalogConfig)
-    await convertProcess.execute() 
+    convertProcess.execute()
     return ResponseModel(message='convert complete')
 
 # 피드 정보 확인
@@ -123,3 +125,12 @@ async def getFeedExport(catalog_id):
 # @router.get('/feed/upload/{catalog_id}')
 # async def getFeedUpload():
 #     return {'message': 'get_feed_upload'}
+
+
+@router.get('/test/async')
+async def test_sync():
+    print('test async')    
+    await asyncio.sleep(5)
+    print('end await')
+    return ResponseModel(message='test end')
+    

@@ -6,6 +6,7 @@ from common.ResponseModel import ResponseModel
 import logging
 import time
 import requests
+import uvicorn
 
 
 from starlette.responses import JSONResponse
@@ -33,5 +34,10 @@ async def benchmark_middleware(request: Request, call_next) :
         starttime = time.time()
         response = await call_next(request)
         duration = time.time() - starttime
-        response.headers['Server-Timing'] = format(duration,'0.3f') # second        
+        response.headers['Server-Timing'] = format(duration,'0.3f') # second
         return response
+
+# run server
+if __name__ == '__main__':
+    # reload=True 시 single process로 돌아감
+    uvicorn.run('main:app', host='127.0.0.1', port=8000, reload=True, workers=4)#
