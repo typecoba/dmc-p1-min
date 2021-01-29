@@ -23,21 +23,21 @@ class ConvertProcess():
         # data download
         # self.fileService.download(self.catalogConfig['ep']['url'], self.catalogConfig['ep']['fullPath'])
         
-        # chunk load
-        oricolumns = None
+        # chunk load                
         for num, chunkDF in enumerate(self.epLoad()):
             # convert
-            chunkDF = self.convertFilter.run(chunkDF)
-            # # feed write
+            chunkDF = self.convertFilter.run(chunkDF)            
+
+            # feed write
             self.feedWrite(num, chunkDF)
             
-            # # log 임시
+            # log 임시
             print(len(chunkDF), end='..', flush=True)
 
-            # # memory clean
+            # memory clean
             del[[chunkDF]]
-            gc.collect()
-                        
+            gc.collect()            
+            # break
 
         # 압축할 필요가 있나?
 
@@ -53,24 +53,28 @@ class ConvertProcess():
 
     # ep데이터 로드
     def epLoad(self):
-        # chunksize 단위로 쪼개서 로드
-        # title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
-        # 컬럼 정리를 위해 원본 columns 리스트를 세팅해 chunk
+        ''' 
+        chunksize 단위로 로드
+        title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
+        컬럼 정리를 위해 원본 columns 리스트를 세팅해 chunk
+        '''
+        # 원본 컬럼리스트
         columns = pd.read_csv(self.catalogConfig['ep']['fullPath'],
-                                nrows=1, #한줄만 읽음                                
-                                sep=self.catalogConfig['ep']['sep'],
-                                lineterminator='\n',                                
+                                nrows=1, #한줄만 읽음
+                                # sep=self.catalogConfig['ep']['sep'], # 자동인식
+                                # lineterminator='\r',
                                 encoding=self.catalogConfig['ep']['encoding'])
-        columns = list(columns) # 원본 컬럼리스트
-        
+        columns = list(columns) 
+        # print(columns)
 
         result = pd.read_csv(self.catalogConfig['ep']['fullPath'],
                             chunksize=100000, # 일단 10만
                             header=0, # header row
-                            sep=self.catalogConfig['ep']['sep'],
-                            lineterminator='\n',
+                            dtype=str, # string type 인식
+                            # sep=self.catalogConfig['ep']['sep'], #자동인식
+                            # lineterminator='\r',
                             error_bad_lines=False, # error skip
-                            usecols=columns,
+                            usecols=columns, # chunk에도 컬럼명 표기
                             encoding=self.catalogConfig['ep']['encoding'])
         return result
         
@@ -79,7 +83,7 @@ class ConvertProcess():
     def feedWrite(self, num, df):
         if num == 0:
             mode='w' # 새로쓰기
-            header=True
+            header=True 
         else:
             mode='a' # 이어쓰기
             header=False
@@ -88,7 +92,7 @@ class ConvertProcess():
                     index=False, # 자체 인덱스제거
                     sep='\t', 
                     mode=mode,
-                    header=header,
+                    header=header, # 컬럼명 
                     encoding='utf-8')                
 
     

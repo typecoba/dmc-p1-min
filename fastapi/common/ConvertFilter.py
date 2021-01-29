@@ -10,27 +10,24 @@ class ConvertFilter():
 
     # 실행함수
     def run(self, dataframe):        
-        # 공통 filter
-        self.commonFilter(dataframe)
-        
-        # 매체별 공통 filter
-        self.mediaFilter()
+        self.result = dataframe
 
-        # 개별 filter
-        self.customFilter()
+        self.commonFilter() # 공통 filter                
+        self.mediaFilter() # 매체별 공통 filter        
+        self.customFilter() # 카탈로그별 filter
                         
         return self.result
 
         
-    def commonFilter(self, dataframe):
-        # columns {'a':'b'}  ep 'a' to feed 'b'
-        
+    def commonFilter(self):
+        # columns {'a':'b'}  'a'->'b'
         keys = list(self.catalogConfig['columns'].keys())
-        self.result = dataframe[keys] # 필요컬럼만 추출                
-        self.result.rename(columns= self.catalogConfig['columns'], inplace=True) # key 수정    
+        self.result = self.result[keys] # 필요컬럼만 추출                
+        self.result.rename(columns= self.catalogConfig['columns'], inplace=False) # key 수정
 
-        if ('custom' in self.catalogConfig) == False : 
-            pass
+        # 공백제거, result.apply(lambda x: x.str.strip(), axis=1) 로 돌리면 너무느림
+        for key in keys :
+            self.result[key] = self.result[key].str.strip()
 
         # include
         if 'include' in self.catalogConfig['custom']:
@@ -54,12 +51,11 @@ class ConvertFilter():
                 before = list(value.keys())[0]
                 after = list(value.values())[0]                
                 self.result[key] = self.result[key].str.replace(before, after, regex=True) # regex사용 replace
-
+        
 
     # 매체별 기본값 등    
     def mediaFilter(self):
-        if self.catalogConfig['info']['media'] == 'facebook' :
-            
+        if self.catalogConfig['info']['media'] == 'facebook' :            
             if 'availability' not in self.result :
                 self.result['availability'] = 'in stock'
             # condition
@@ -71,7 +67,10 @@ class ConvertFilter():
 
 
     # 특수한 개별로직인 경우 catalogConfig 와 매칭시켜 개별관리
-    def customFilter(self):
+    def customFilter(self):        
+        if ('custom' in self.catalogConfig) == False :             
+            return None
+                
         media = self.catalogConfig['info']['media']
         catalog_id = self.catalogConfig['info']['catalog_id']
         name = self.catalogConfig['info']['name']
@@ -79,7 +78,7 @@ class ConvertFilter():
         if media == 'facebook' :
             if name == 'ssg_ep_test' and catalog_id == '268046537186348' :
                 # link
-                self.result['link'] = 'https://ad.adpool.co.kr/app/ssg/item/'+str(self.result['id'])
+                self.result['link'] = 'https://ad.adpool.co.kr/app/ssg/item/' + self.result['id']                
 
             elif name == 'hellonature' and catalog_id == '154972755345007':
                 pass
