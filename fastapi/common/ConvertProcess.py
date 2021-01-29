@@ -56,7 +56,7 @@ class ConvertProcess():
         ''' 
         chunksize 단위로 로드
         title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
-        컬럼 정리를 위해 원본 columns 리스트를 세팅해 chunk
+        컬럼 정리를 위해 원본 컬럼 리스트를 세팅해 로드
         '''
         # 원본 컬럼리스트
         columns = pd.read_csv(self.catalogConfig['ep']['fullPath'],
@@ -68,8 +68,9 @@ class ConvertProcess():
         # print(columns)
 
         result = pd.read_csv(self.catalogConfig['ep']['fullPath'],
+                            nrows=None,
                             chunksize=100000, # 일단 10만
-                            header=0, # header row
+                            header=0, # header row                            
                             dtype=str, # string type 인식
                             # sep=self.catalogConfig['ep']['sep'], #자동인식
                             # lineterminator='\r',

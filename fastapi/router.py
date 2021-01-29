@@ -19,8 +19,7 @@ fileService = FileService()
 # home
 @router.get('/', status_code=HTTPStatus.OK)
 async def home():
-    return ResponseModel(HTTPStatus.OK.value, HTTPStatus.OK.phrase, message="feed convert min")    
-
+    return ResponseModel(message='feedconvert_min_home')
 
 # error test
 @router.get('/error')
@@ -32,13 +31,13 @@ async def error():
 @router.get('/config', status_code=HTTPStatus.OK)
 async def getCatalogConfigs():
     catalogConfig = configRepository.findAll()
-    return ResponseModel(data=catalogConfig)
+    return ResponseModel(content=catalogConfig)
 
 
 @router.get('/config/{catalog_id}', status_code=HTTPStatus.OK)
 async def getCatalogConfig(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
-    return ResponseModel(data=catalogConfig)
+    return ResponseModel(content=catalogConfig)
 
 
 # ep 정보 확인
@@ -46,7 +45,7 @@ async def getCatalogConfig(catalog_id):
 async def getEpInfo(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
     result = fileService.getInfo(catalogConfig['ep']['url'])
-    return ResponseModel(data=result)
+    return ResponseModel(content=result)
 
 
 # ep 브라우저 다운로드
@@ -90,7 +89,7 @@ async def getEpConvert2feed(catalog_id):
 async def getFeedInfo():
     catalogConfig = configRepository.findOne(catalog_id)
     result = fileService.getInfo(catalogConfig['feed']['fullPath'])
-    return ResponseModel(data=result)    
+    return ResponseModel(content=result)    
 
 
 # 피드 내용 확인
