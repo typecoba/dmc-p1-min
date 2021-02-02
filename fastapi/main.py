@@ -20,6 +20,8 @@ exception handler
 mongoose
 '''
 app = FastAPI()
+
+# 라우터
 app.include_router(router.router)
 
 # exception handler
@@ -55,10 +57,10 @@ async def response_middleware(request: Request, call_next) :
     jsonResponse = JSONResponse({
         "statusCode":mResponse.status_code,
         "statusName":requests.status_codes._codes[mResponse.status_code][0],
-        "message": responseModel['message'],
-        "content": responseModel['content'],
+        "message": responseModel['message'],        
         "responseTime":datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), # 반환시간
-        "processTime":format(duration, '0.3f') # 처리시간(초)
+        "processTime":format(duration, '0.3f'), # 처리시간(초)
+        "content": responseModel['content']
     },status_code=mResponse.status_code)
 
     return jsonResponse
