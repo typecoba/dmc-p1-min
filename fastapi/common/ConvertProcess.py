@@ -61,7 +61,7 @@ class ConvertProcess():
         # 원본 컬럼리스트
         columns = pd.read_csv(self.catalogConfig['ep']['fullPath'],
                                 nrows=1, #한줄만 읽음
-                                # sep=self.catalogConfig['ep']['sep'], # 자동인식
+                                sep=self.catalogConfig['ep']['sep'], # 명시
                                 # lineterminator='\r',
                                 encoding=self.catalogConfig['ep']['encoding'])
         columns = list(columns) 
@@ -72,7 +72,7 @@ class ConvertProcess():
                             chunksize=100000, # 일단 10만
                             header=0, # header row                            
                             dtype=str, # string type 인식
-                            # sep=self.catalogConfig['ep']['sep'], #자동인식
+                            sep=self.catalogConfig['ep']['sep'], # 명시
                             # lineterminator='\r',
                             error_bad_lines=False, # error skip
                             usecols=columns, # chunk에도 컬럼명 표기

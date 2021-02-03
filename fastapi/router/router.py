@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from common.ResponseModel import ResponseModel
-from common.ConfigRepository import ConfigRepository
+from repository.ConfigRepository import ConfigRepository
 from common.FileService import FileService
 from common.ConvertProcess import ConvertProcess
 from http import HTTPStatus
@@ -24,7 +24,7 @@ async def home():
 # error test
 @router.get('/error')
 async def error():
-    raise HTTPException(status_code=400, detail='error page') # exception발생
+    raise HTTPException(status_code=400, detail='error page')  # exception발생
 
 
 # 카탈로그 config 확인
@@ -52,15 +52,16 @@ async def getEpInfo(catalog_id):
 @router.get('/ep/export/{catalog_id}')
 async def getEpExport(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
-    
+
     # ep download
-    if os.path.isfile(catalogConfig['ep']['fullPath']) == False: # 파일없는경우 다운로드
-        fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
+    if os.path.isfile(catalogConfig['ep']['fullPath']) == False:  # 파일없는경우 다운로드
+        fileService.download(
+            catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
 
     # ep export
-    response = FileResponse(catalogConfig['ep']['fullPath'], 
-                        media_type='application/octet-stream', 
-                        filename=catalogConfig['ep']['fullPath'].split('/')[-1])
+    response = FileResponse(catalogConfig['ep']['fullPath'],
+                            media_type='application/octet-stream',
+                            filename=catalogConfig['ep']['fullPath'].split('/')[-1])
     return response
 
 
@@ -69,7 +70,7 @@ async def getDownload(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
     await fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
     # await fileService.aDownload(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
-    return ResponseModel(message='download complete')    
+    return ResponseModel(message='download complete')
 
 # ep 내용확인
 # @router.get('/ep/detail/{catalog_id}')
@@ -79,7 +80,7 @@ async def getDownload(catalog_id):
 # ep 변환(만)
 @router.get('/ep/convert2feed/{catalog_id}')
 async def getEpConvert2feed(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)    
+    catalogConfig = configRepository.findOne(catalog_id)
     convertProcess = ConvertProcess(catalogConfig)
     convertProcess.execute()
     return ResponseModel(message='convert complete')
@@ -89,7 +90,7 @@ async def getEpConvert2feed(catalog_id):
 async def getFeedInfo():
     catalogConfig = configRepository.findOne(catalog_id)
     result = fileService.getInfo(catalogConfig['feed']['fullPath'])
-    return ResponseModel(content=result)    
+    return ResponseModel(content=result)
 
 
 # 피드 내용 확인
@@ -107,7 +108,7 @@ async def getFeedExport(catalog_id):
 
     # file export
     response = FileResponse(catalogConfig['feed']['fullPath'],
-                            media_type='application/octet-stream', 
+                            media_type='application/octet-stream',
                             filename=catalogConfig['feed']['fullPath'].split('/')[-1])
     return response
 
@@ -128,8 +129,7 @@ async def getFeedExport(catalog_id):
 
 @router.get('/test/async')
 async def test_sync():
-    print('test async')    
+    print('test async')
     await asyncio.sleep(5)
     print('end await')
     return ResponseModel(message='test end')
-    
