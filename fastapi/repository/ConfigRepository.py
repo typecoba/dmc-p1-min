@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from pymongo import MongoClient
 from starlette.config import Config
 import os
-
+from common.Logger import Logger
 
 class ConfigRepository():
 
@@ -15,9 +15,9 @@ class ConfigRepository():
     mongo = None
 
     # pixel crawl data
-
     def __init__(self):
         self.mongo = self.getClient(self.host, int(self.port))
+        
 
     # connect
     def getClient(self, host, port):

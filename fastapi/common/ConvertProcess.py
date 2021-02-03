@@ -4,6 +4,7 @@ import gc
 import zipfile
 from common.ConvertFilter import ConvertFilter
 from common.FileService import FileService
+from common.Logger import Logger
 import requests
 from starlette.config import Config
 
@@ -17,6 +18,12 @@ class ConvertProcess():
         self.catalogConfig = catalogConfig
         self.convertFilter = ConvertFilter(catalogConfig) # 필터 클래스
         self.fileService = FileService() # 파일 매니저 클래스
+        logFileFullPath = '{root}/data/facebook/log/log_{catalog_id}_{feed_id}.log'.format(
+                            root=os.getcwd().replace('\\', '/'),
+                            catalog_id=catalogConfig['info']['catalog_id'],
+                            feed_id=catalogConfig['info']['feed_id'])
+
+        self.logger = Logger(self.__class__.__qualname__, logFileFullPath).get() # logger
 
     # download - epLoad - convert - feedWrite - feedUpload
     def execute(self):
@@ -26,13 +33,14 @@ class ConvertProcess():
         # chunk load                
         for num, chunkDF in enumerate(self.epLoad()):
             # convert
-            chunkDF = self.convertFilter.run(chunkDF)            
+            chunkDF = self.convertFilter.run(chunkDF)
 
             # feed write
             self.feedWrite(num, chunkDF)
             
             # log 임시
-            print(len(chunkDF), end='..', flush=True)
+            # print(len(chunkDF), end='..', flush=True)
+            self.logger.info(len(chunkDF))
 
             # memory clean
             del[[chunkDF]]
@@ -44,7 +52,7 @@ class ConvertProcess():
         # feed upload
         # self.feedUpload()
 
-        print('\ncomplete')
+        self.logger.info('feed convert complete')
 
 
     # pixel데이터 다운로드 (to ep)
