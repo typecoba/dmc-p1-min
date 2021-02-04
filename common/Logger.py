@@ -17,4 +17,4 @@ class Logger():
             self.logger.addHandler(file_handler)
     
     def get(self):
-        return self.logger        
+        return self.logger
