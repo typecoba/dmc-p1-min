@@ -9,10 +9,15 @@ import aiofiles
 
 from starlette.config import Config
 from fastapi import HTTPException
+from common.Logger import Logger
 
 class FileService():    
-    def __init__(self):
+    def __init__(self):        
+        self.logger = Logger('root').get() # 공통로거 생성
         pass
+
+    def setLogger(self, logger=None):
+        self.logger = logger
 
     def getInfo(self, filePath=None):
         if 'http' in filePath :
@@ -50,19 +55,27 @@ class FileService():
     '''    
     async def download(self, originalPath, downloadPath):    
 
-        if ('http://' in originalPath) == False : # url이 아닌 경우            
+        if ('http://' in originalPath) == False : # url이 아닌 경우
+            self.logger.info('-'*10+'Copy Start')
+            self.logger.info(self.getInfo(originalPath))
             shutil.copy(originalPath, downloadPath) # 로컬파일 복사
+            self.logger.info('-'*10+'Copy End')
 
         else : # url 경로            
             req = request.urlopen(originalPath)
             chunk_size = 1024*1000*10 # 일단 10Mb씩
+            
+            self.logger.info('-'*10+'Download Start')
+            self.logger.info(self.getInfo(originalPath))
+            
             with open(downloadPath, 'wb') as f:
                 while True:
                     chunk = req.read(chunk_size)                                        
                     if not chunk: break
                     f.write(chunk)
-
                 f.close()
+
+                self.logger.info('-'*10+'Download Complete')
         
 
 

@@ -17,9 +17,10 @@ class ResponseMiddleware():
         async for chunk in mResponse.body_iterator:
             content += chunk
         responseModel = json.loads(content.decode('utf-8'))
+        
         # end
         duration = time.time() - starttime
-
+        
         jsonResponse = JSONResponse({
             "statusCode": mResponse.status_code,
             "statusName": requests.status_codes._codes[mResponse.status_code][0],

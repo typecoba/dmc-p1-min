@@ -24,21 +24,18 @@ class ConfigRepository():
         try:
             result = MongoClient(host, port)
         except:
-            raise HTTPException(
-                status_code=400, detail="mongo client connect error")
+            raise HTTPException(status_code=400, detail="mongo client connect error")
         return result
 
     # config read
     def findAll(self):
-        catalogConfig = list(
-            self.mongo[self.db][self.col].find({}, {'_id': False}))
+        catalogConfig = list(self.mongo[self.db][self.col].find({}, {'_id': False}))
         for row in catalogConfig:
             self.setFullPath(row)
         return catalogConfig
 
     def findOne(self, catalog_id=None):
-        catalogConfig = self.mongo[self.db][self.col].find_one(
-            {'info.catalog_id': catalog_id}, {'_id': False})
+        catalogConfig = self.mongo[self.db][self.col].find_one({'info.catalog_id': catalog_id}, {'_id': False})
         self.setFullPath(catalogConfig)
         return catalogConfig
 
@@ -61,5 +58,14 @@ class ConfigRepository():
             feed_id=config['info']['feed_id'],
             file_format='tsv'
         )
+
+        logFullPath = '{root}/data/{media}/log/log_{catalog_id}_{feed_id}.log'.format(
+            root=root,
+            media=config['info']['media'],
+            catalog_id=config['info']['catalog_id'],
+            feed_id=config['info']['feed_id'],            
+        )
+
         config['ep']['fullPath'] = epFullPath
         config['feed'] = {'fullPath': feedFullPath}
+        config['log'] = {'fullPath': logFullPath}

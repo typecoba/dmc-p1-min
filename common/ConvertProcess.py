@@ -14,45 +14,46 @@ class ConvertProcess():
         '''
         config관련 정보 분리해야함
         config를 router에서 최초 한번 불러와서 전달하는게 좋을듯
-        '''        
+        '''
+        # convert pipeline logger
+        self.logger = Logger('convertProcess', catalogConfig['log']['fullPath']) # logger self.__class__.__qualname__
+
         self.catalogConfig = catalogConfig
         self.convertFilter = ConvertFilter(catalogConfig) # 필터 클래스
-        self.fileService = FileService() # 파일 매니저 클래스
-        logFileFullPath = '{root}/data/facebook/log/log_{catalog_id}_{feed_id}.log'.format(
-                            root=os.getcwd().replace('\\', '/'),
-                            catalog_id=catalogConfig['info']['catalog_id'],
-                            feed_id=catalogConfig['info']['feed_id'])
-
-        self.logger = Logger(self.__class__.__qualname__, logFileFullPath).get() # logger
+        self.fileService = FileService() # 파일 매니저 클래스        
+        self.fileService.setLogger(self.logger) # 파이프라인 공통로거 삽입
+        
+        
 
     # download - epLoad - convert - feedWrite - feedUpload
-    def execute(self):
+    async def execute(self):
         # data download
-        # self.fileService.download(self.catalogConfig['ep']['url'], self.catalogConfig['ep']['fullPath'])
+        await self.fileService.download(self.catalogConfig['ep']['url'], self.catalogConfig['ep']['fullPath'])
         
         # chunk load                
+        self.logger.info('-'*10+'Feed Convert Start')
         for num, chunkDF in enumerate(self.epLoad()):
             # convert
             chunkDF = self.convertFilter.run(chunkDF)
 
             # feed write
             self.feedWrite(num, chunkDF)
-            
-            # log 임시
-            # print(len(chunkDF), end='..', flush=True)
-            self.logger.info(len(chunkDF))
+                        
+            self.logger.join(str(len(chunkDF))+'..')
 
             # memory clean
             del[[chunkDF]]
             gc.collect()            
             # break
 
+        self.logger.join('\n')
+
         # 압축할 필요가 있나?
 
         # feed upload
         # self.feedUpload()
 
-        self.logger.info('feed convert complete')
+        self.logger.info('-'*10+'Feed Convert Complete')
 
 
     # pixel데이터 다운로드 (to ep)

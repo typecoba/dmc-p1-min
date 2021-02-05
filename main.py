@@ -36,22 +36,4 @@ app.middleware('http')(ResponseMiddleware())
 
 # run server
 if __name__ == '__main__':
-    logger = logging.getLogger('logger')
-    logger.setLevel(logging.INFO)
-
-    formatter = logging.Formatter('[%(asctime)s] (%(levelname)s) : %(message)s')
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
-
-
-    file_handler = logging.FileHandler('api.log')
-    logger.addHandler(file_handler)
-
-    logger.info('server start')
-
-
     uvicorn.run('main:app', host='127.0.0.1', port=8000, reload=True, workers=4) # reload=True 시 single process로 돌아감
-
-    
-    

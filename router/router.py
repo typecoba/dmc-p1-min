@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from common.ResponseModel import ResponseModel
-from repository.ConfigRepository import ConfigRepository
 from common.FileService import FileService
 from common.ConvertProcess import ConvertProcess
+from common.Logger import Logger
+from repository.ConfigRepository import ConfigRepository
 from http import HTTPStatus
 from starlette.config import Config
 from starlette.responses import FileResponse
@@ -13,6 +14,7 @@ import asyncio
 router = APIRouter()
 configRepository = ConfigRepository()
 fileService = FileService()
+
 
 # facebook기준 ep, feed 명칭으로 통일함
 
@@ -55,8 +57,7 @@ async def getEpExport(catalog_id):
 
     # ep download
     if os.path.isfile(catalogConfig['ep']['fullPath']) == False:  # 파일없는경우 다운로드
-        fileService.download(
-            catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
+        fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
 
     # ep export
     response = FileResponse(catalogConfig['ep']['fullPath'],
@@ -66,11 +67,11 @@ async def getEpExport(catalog_id):
 
 
 @router.get('/ep/download/{catalog_id}')
-async def getDownload(catalog_id):
+async def getDownload(catalog_id):    
     catalogConfig = configRepository.findOne(catalog_id)
     await fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
     # await fileService.aDownload(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
-    return ResponseModel(message='download complete')
+    return ResponseModel(message='download complete') 
 
 # ep 내용확인
 # @router.get('/ep/detail/{catalog_id}')
@@ -82,7 +83,7 @@ async def getDownload(catalog_id):
 async def getEpConvert2feed(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
     convertProcess = ConvertProcess(catalogConfig)
-    convertProcess.execute()
+    await convertProcess.execute()
     return ResponseModel(message='convert complete')
 
 # 피드 정보 확인
@@ -130,6 +131,19 @@ async def getFeedExport(catalog_id):
 @router.get('/test/async')
 async def test_sync():
     print('test async')
-    await asyncio.sleep(5)
+    await asyncio.sleep(1)
     print('end await')
     return ResponseModel(message='test end')
+
+
+@router.get('/test/log')
+async def testLog():
+    logger = Logger(name='test',filePath='./data/root.log')
+    total = 100
+    for x in range(total):
+        perc = x/total*100
+        if perc%5 == 0 :            
+            logger.join(format(perc,'0.0f')+'%..')
+    logger.join('\n')                        
+    logger.info('complete')
+    return ResponseModel()
