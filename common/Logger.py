@@ -36,6 +36,7 @@ class Logger():
             formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
             self.streamHandler.setFormatter(formatter)
             self.fileHandler.setFormatter(formatter)
+            self.streamHandler.terminator = '\n'
             self.fileHandler.terminator = '\n'
         self.logger.info(msg)
 
@@ -44,5 +45,6 @@ class Logger():
             formatter = logging.Formatter('%(message)s')
             self.streamHandler.setFormatter(formatter)
             self.fileHandler.setFormatter(formatter)
+            self.fileHandler.terminator = ''
             self.fileHandler.terminator = ''
         self.logger.info(msg)

@@ -26,7 +26,7 @@ class ResponseMiddleware():
             "statusName": requests.status_codes._codes[mResponse.status_code][0],
             "message": responseModel['message'],
             "responseTime": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # 반환시간
-            "processTime": format(duration, '0.3f'),  # 처리시간(초)
+            "processTime": format(duration, '0.3f')+'s',  # 처리시간(초)
             "content": responseModel['content']
         }, status_code=mResponse.status_code)
 

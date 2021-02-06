@@ -68,9 +68,8 @@ async def getEpExport(catalog_id):
 
 @router.get('/ep/download/{catalog_id}')
 async def getDownload(catalog_id):    
-    catalogConfig = configRepository.findOne(catalog_id)
-    await fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
-    # await fileService.aDownload(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
+    catalogConfig = configRepository.findOne(catalog_id)    
+    fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])    
     return ResponseModel(message='download complete') 
 
 # ep 내용확인
@@ -131,7 +130,7 @@ async def getFeedExport(catalog_id):
 @router.get('/test/async')
 async def test_sync():
     print('test async')
-    await asyncio.sleep(1)
+    await asyncio.sleep(3)
     print('end await')
     return ResponseModel(message='test end')
 
