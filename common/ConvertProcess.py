@@ -8,6 +8,10 @@ from common.Logger import Logger
 import requests
 from starlette.config import Config
 
+'''
+execute 단위로 비동기 코루틴 생성
+'''
+
 class ConvertProcess():
     
     def __init__(self, catalogConfig):
@@ -16,7 +20,7 @@ class ConvertProcess():
         config를 router에서 최초 한번 불러와서 전달하는게 좋을듯
         '''
         # convert pipeline logger
-        self.logger = Logger('convertProcess', catalogConfig['log']['fullPath']) # logger self.__class__.__qualname__
+        self.logger = Logger('convertLog', catalogConfig['log']['path']) # logger self.__class__.__qualname__
 
         self.catalogConfig = catalogConfig
         self.convertFilter = ConvertFilter(catalogConfig) # 필터 클래스
@@ -28,32 +32,35 @@ class ConvertProcess():
     # download - epLoad - convert - feedWrite - feedUpload
     async def execute(self):
         # data download
-        await self.fileService.download(self.catalogConfig['ep']['url'], self.catalogConfig['ep']['fullPath'])
+        self.logger.info('==Feed Convert Process Start==')
+        await self.fileService.download(self.catalogConfig['ep']['url'], self.catalogConfig['ep']['path'], self.catalogConfig['ep']['backupPath'])
         
         # chunk load                
-        self.logger.info('-'*10+'Feed Convert Start')
-        for num, chunkDF in enumerate(self.epLoad()):
-            # convert
-            chunkDF = self.convertFilter.run(chunkDF)
-
-            # feed write
-            self.feedWrite(num, chunkDF)
-                        
-            self.logger.join(str(len(chunkDF))+'..')
+        self.logger.info('Convert '+str(self.catalogConfig['custom']))        
+        rowcount = 0
+        for num, chunkDF in enumerate(self.epLoad()):            
+            chunkDF = self.convertFilter.run(chunkDF) # convert            
+            self.feedWrite(num, chunkDF) # write
+            
+            # log
+            rowcount = rowcount + len(chunkDF)
+            self.logger.join(str(rowcount)+'...')
 
             # memory clean
             del[[chunkDF]]
-            gc.collect()            
-            # break
+            gc.collect()
+            # break       
+        self.logger.join('\n') 
+        
 
-        self.logger.join('\n')
+        # feed 백업
+        self.fileService.backup(self.catalogConfig['feed']['path'], self.catalogConfig['feed']['backupPath'])
 
-        # 압축할 필요가 있나?
-
-        # feed upload
+        # feed upload        
         # self.feedUpload()
-
-        self.logger.info('-'*10+'Feed Convert Complete')
+        
+        self.logger.info('==Feed Convert Process End====')
+        
 
 
     # pixel데이터 다운로드 (to ep)
@@ -68,7 +75,7 @@ class ConvertProcess():
         컬럼 정리를 위해 원본 컬럼 리스트를 세팅해 로드
         '''
         # 원본 컬럼리스트
-        columns = pd.read_csv(self.catalogConfig['ep']['fullPath'],
+        columns = pd.read_csv(self.catalogConfig['ep']['path'],
                                 nrows=1, #한줄만 읽음
                                 sep=self.catalogConfig['ep']['sep'], # 명시
                                 # lineterminator='\r',
@@ -76,7 +83,7 @@ class ConvertProcess():
         columns = list(columns) 
         # print(columns)
 
-        result = pd.read_csv(self.catalogConfig['ep']['fullPath'],
+        result = pd.read_csv(self.catalogConfig['ep']['path'],
                             nrows=None,
                             chunksize=100000, # 일단 10만
                             header=0, # header row                            
@@ -98,12 +105,12 @@ class ConvertProcess():
             mode='a' # 이어쓰기
             header=False
         
-        df.to_csv(self.catalogConfig['feed']['fullPath'], 
+        df.to_csv(self.catalogConfig['feed']['path'], 
                     index=False, # 자체 인덱스제거
                     sep='\t', 
                     mode=mode,
                     header=header, # 컬럼명 
-                    encoding='utf-8')                
+                    encoding='utf-8')
 
     
     def feedUpload(self):

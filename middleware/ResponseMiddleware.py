@@ -1,33 +1,39 @@
 from fastapi import Request
 import time, json, requests, datetime
 from starlette.responses import JSONResponse
+import logging, os
+from common.Logger import Logger
 
 """
 message, content받아 상태값 추가하여 일괄반환
 json->byte->string->dict
 """
-class ResponseMiddleware():    
+class ResponseMiddleware():
     async def __call__(self, request: Request, call_next):
-        starttime = time.time()
+        # root log
+        logger = Logger().get() # root logger
+        logger.info(f'**Request {request.url.path}')
 
         # start
+        starttime = time.time()
         # json string byte로 받아 dict로 변환
-        mResponse = await call_next(request)
+        response = await call_next(request) #response
         content = b""
-        async for chunk in mResponse.body_iterator:
+        async for chunk in response.body_iterator:
             content += chunk
         responseModel = json.loads(content.decode('utf-8'))
-        
         # end
-        duration = time.time() - starttime
+        duration = format(time.time() - starttime, '0.3f')
+
+        logger.info(f'**Response duration={duration} status_code=response.status_code')
         
         jsonResponse = JSONResponse({
-            "statusCode": mResponse.status_code,
-            "statusName": requests.status_codes._codes[mResponse.status_code][0],
+            "statusCode": response.status_code,
+            "statusName": requests.status_codes._codes[response.status_code][0],
             "message": responseModel['message'],
             "responseTime": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # 반환시간
-            "processTime": format(duration, '0.3f')+'s',  # 처리시간(초)
+            "processTime": duration,  # 처리시간(초)
             "content": responseModel['content']
-        }, status_code=mResponse.status_code)
+        }, status_code=response.status_code)
 
         return jsonResponse

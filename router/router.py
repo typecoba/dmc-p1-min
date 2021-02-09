@@ -15,7 +15,6 @@ router = APIRouter()
 configRepository = ConfigRepository()
 fileService = FileService()
 
-
 # facebook기준 ep, feed 명칭으로 통일함
 
 # home
@@ -54,42 +53,41 @@ async def getEpInfo(catalog_id):
 @router.get('/ep/export/{catalog_id}')
 async def getEpExport(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
-
-    # ep download
-    if os.path.isfile(catalogConfig['ep']['fullPath']) == False:  # 파일없는경우 다운로드
-        fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])
-
-    # ep export
-    response = FileResponse(catalogConfig['ep']['fullPath'],
+    # exception
+    if os.path.isfile(catalogConfig['ep']['path']) == False:        
+        raise HTTPException(400, 'feed file not found')
+    # file export
+    response = FileResponse(catalogConfig['ep']['path'],
                             media_type='application/octet-stream',
-                            filename=catalogConfig['ep']['fullPath'].split('/')[-1])
+                            filename=catalogConfig['ep']['path'].split('/')[-1])
     return response
 
 
 @router.get('/ep/download/{catalog_id}')
-async def getDownload(catalog_id):    
-    catalogConfig = configRepository.findOne(catalog_id)    
-    fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['fullPath'])    
-    return ResponseModel(message='download complete') 
+async def getDownload(catalog_id):
+    catalogConfig = configRepository.findOne(catalog_id)        
+    await fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['path'], catalogConfig['ep']['backupPath'])
+
+    fileInfo = fileService.getInfo(catalogConfig['ep']['url'])    
+    return ResponseModel(message='download complete', content=fileInfo)
 
 # ep 내용확인
 # @router.get('/ep/detail/{catalog_id}')
 # async def getEpDetail():
 #     return {'message': 'get_ep_detail'}
 
-# ep 변환(만)
+# ep 변환(만) 단위테스트
 @router.get('/ep/convert2feed/{catalog_id}')
 async def getEpConvert2feed(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)
-    convertProcess = ConvertProcess(catalogConfig)
-    await convertProcess.execute()
+    catalogConfig = configRepository.findOne(catalog_id)    
+    await ConvertProcess(catalogConfig).execute()
     return ResponseModel(message='convert complete')
 
 # 피드 정보 확인
 @router.get('/feed/info/{catalog_id}')
 async def getFeedInfo():
     catalogConfig = configRepository.findOne(catalog_id)
-    result = fileService.getInfo(catalogConfig['feed']['fullPath'])
+    result = fileService.getInfo(catalogConfig['feed']['path'])
     return ResponseModel(content=result)
 
 
@@ -102,14 +100,13 @@ async def getFeedInfo():
 @router.get('/feed/export/{catalog_id}')
 async def getFeedExport(catalog_id):
     catalogConfig = configRepository.findOne(catalog_id)
-    if os.path.isfile(catalogConfig['feed']['fullPath']) == False:
-        # return ResponseModel(HTTPStatus.BAD_REQUEST.value, HTTPStatus.BAD_REQUEST.phrase, message='feed file not found')
+    # exception
+    if os.path.isfile(catalogConfig['feed']['path']) == False:        
         raise HTTPException(400, 'feed file not found')
-
     # file export
-    response = FileResponse(catalogConfig['feed']['fullPath'],
+    response = FileResponse(catalogConfig['feed']['path'],
                             media_type='application/octet-stream',
-                            filename=catalogConfig['feed']['fullPath'].split('/')[-1])
+                            filename=catalogConfig['feed']['path'].split('/')[-1])
     return response
 
 
@@ -134,15 +131,3 @@ async def test_sync():
     print('end await')
     return ResponseModel(message='test end')
 
-
-@router.get('/test/log')
-async def testLog():
-    logger = Logger(name='test',filePath='./data/root.log')
-    total = 100
-    for x in range(total):
-        perc = x/total*100
-        if perc%5 == 0 :            
-            logger.join(format(perc,'0.0f')+'%..')
-    logger.join('\n')                        
-    logger.info('complete')
-    return ResponseModel()
