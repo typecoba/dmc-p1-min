@@ -11,7 +11,7 @@ json->byte->string->dict
 class ResponseMiddleware():
     async def __call__(self, request: Request, call_next):
         # root log
-        logger = Logger().get() # root logger
+        logger = Logger() # root logger
         logger.info(f'**Request {request.url.path}')
 
         # start
@@ -25,7 +25,7 @@ class ResponseMiddleware():
         # end
         duration = format(time.time() - starttime, '0.3f')
 
-        logger.info(f'**Response duration={duration} status_code=response.status_code')
+        logger.info(f'**Response duration={duration} status_code={response.status_code}')
         
         jsonResponse = JSONResponse({
             "statusCode": response.status_code,

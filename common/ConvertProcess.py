@@ -19,15 +19,17 @@ class ConvertProcess():
         config관련 정보 분리해야함
         config를 router에서 최초 한번 불러와서 전달하는게 좋을듯
         '''
+
         # convert pipeline logger
-        self.logger = Logger('convertLog', catalogConfig['log']['path']) # logger self.__class__.__qualname__
+        catalog_id = catalogConfig['info']['catalog_id']
+        logPath = catalogConfig['log']['path']
+        self.logger = Logger(name=f'log_{catalog_id}', filePath=logPath) # logger self.__class__.__qualname__
 
         self.catalogConfig = catalogConfig
         self.convertFilter = ConvertFilter(catalogConfig) # 필터 클래스
         self.fileService = FileService() # 파일 매니저 클래스        
         self.fileService.setLogger(self.logger) # 파이프라인 공통로거 삽입
-        
-        
+                
 
     # download - epLoad - convert - feedWrite - feedUpload
     async def execute(self):
@@ -37,20 +39,28 @@ class ConvertProcess():
         
         # chunk load                
         self.logger.info('Convert '+str(self.catalogConfig['custom']))        
-        rowcount = 0
-        for num, chunkDF in enumerate(self.epLoad()):            
+        
+        # total
+        self.totalCount = 0
+        for num, chunkDF in enumerate(self.epLoad()):
+            self.totalCount = self.totalCount + len(chunkDF)
+
+        self.count = 0
+        for num, chunkDF in enumerate(self.epLoad()):
+            self.count = self.count+len(chunkDF)
+
             chunkDF = self.convertFilter.run(chunkDF) # convert            
             self.feedWrite(num, chunkDF) # write
             
             # log
-            rowcount = rowcount + len(chunkDF)
-            self.logger.join(str(rowcount)+'...')
+            # if self.chunkCount%10 == 0 :
+            percent = format(self.count/self.totalCount*100, '.1f')
+            self.logger.info(f'..{percent}%   ({self.count}/{self.totalCount})')
 
             # memory clean
             del[[chunkDF]]
             gc.collect()
-            # break       
-        self.logger.join('\n') 
+            # break
         
 
         # feed 백업
@@ -59,7 +69,7 @@ class ConvertProcess():
         # feed upload        
         # self.feedUpload()
         
-        self.logger.info('==Feed Convert Process End====')
+        self.logger.info('==Feed Convert Process End==')
         
 
 
@@ -85,7 +95,7 @@ class ConvertProcess():
 
         result = pd.read_csv(self.catalogConfig['ep']['path'],
                             nrows=None,
-                            chunksize=100000, # 일단 10만
+                            chunksize=1000, # 일단 10만
                             header=0, # header row                            
                             dtype=str, # string type 인식
                             sep=self.catalogConfig['ep']['sep'], # 명시

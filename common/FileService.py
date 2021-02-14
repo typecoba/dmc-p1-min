@@ -18,7 +18,7 @@ from asyncio.tasks import events
 
 class FileService():    
     def __init__(self):
-        self.logger = Logger().get() # 기본로거 root
+        self.logger = Logger() # 기본로거 root
         pass
 
     def setLogger(self, logger=None):
@@ -68,31 +68,7 @@ class FileService():
     test위해 local file등과같은 경우도 처리
 
     비동기 지원해야함
-    '''        
-    def download_temp(self, originalPath, downloadPath):
-            if ('http://' in originalPath) == False : # url이 아닌 경우
-                self.logger.info('-'*10+'Copy Start')
-                self.logger.info(self.getInfo(originalPath))
-                shutil.copy(originalPath, downloadPath) # 로컬파일 복사
-                self.logger.info('-'*10+'Copy End')
-
-            else : # url 경로            
-                req = request.urlopen(originalPath)
-                chunk_size = 1024*1024*10 # 일단 10Mb씩
-                
-                self.logger.info('-'*10+'Download Start')
-                self.logger.info(self.getInfo(originalPath))
-                
-                with open(downloadPath, 'wb') as f:
-                    while True:
-                        chunk = req.read(chunk_size)                                        
-                        if not chunk: break
-                        f.write(chunk)
-                    f.close()
-
-                    self.logger.info('-'*10+'Download Complete')            
-            
-
+    '''
     # 파일이 없으면 첫부분정도만 확인할수 있나?
     # 파일이 있으면 중간부터 확인할 수 있나?
     # def getEpDetail():
@@ -124,6 +100,7 @@ class FileService():
         zip = zipfile.ZipFile(toPath, 'w')
         zip.write(fromPath, compress_type=zipfile.ZIP_DEFLATED)       
         self.logger.info('Backup '+ str(self.getInfo(toPath)))
+
         # 7일 이전 삭제 (db로 관리해야할듯)        
         # delPath = '{toPath}.{date}.zip'.format(toPath=toPath, date=(datetime.now() + timedelta(days=-keepDay)).strftime('%Y%m%d'))
         # if os.path.isfile(delPath):

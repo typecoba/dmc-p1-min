@@ -8,11 +8,18 @@ from common.Logger import Logger
 class ConfigRepository():
 
     # dev config local
-    envConfig = Config('config.env')
-    host = envConfig('db_config_host')
-    port = envConfig('db_config_port')
-    db = envConfig('db_config_database_name')
-    col = envConfig('db_config_collection_name')
+    config = Config('config.env')
+    host = config('db_config_host')
+    port = config('db_config_port')
+    db = config('db_config_database_name')
+    col = config('db_config_collection_name')
+
+    epPath=config('path_ep')
+    epBackupPath=config('path_ep_backup')
+    feedPath=config('path_feed')
+    feedBackupPath=config('path_feed_backup')
+    convertLogPath=config('path_convert_logs')
+
     mongo = None
 
     # pixel crawl data
@@ -41,30 +48,31 @@ class ConfigRepository():
         return catalogConfig
 
     # 파일저장 Path 생성
-    def setPath(self, config):
+    def setPath(self, catalogConf):
         root = os.getcwd().replace('\\', '/')
-        catalog_id = config['info']['catalog_id']
-        feed_id = config['info']['feed_id']
-        file_format = config['ep']['format']
-        media = config['info']['media']
-        date = datetime.now().strftime('%Y%m%d')
-        
+   
+
+        catalog_id = catalogConf['info']['catalog_id']
+        feed_id = catalogConf['info']['feed_id']
+        file_format = catalogConf['ep']['format']
+        dateDay = datetime.now().strftime('%Y%m%d')
+        dateMonth = datetime.now().strftime('%Y%m')
+
         # ep                
         epFileName = f'ep_{catalog_id}_{feed_id}.{file_format}'            
-        epPath = f'{root}/data/{media}/ep/{epFileName}'
-        epBackupPath = f'{root}/data/{media}/ep/backup/{epFileName}.{date}.zip'
+        epFullPath = f'{root}/{self.epPath}/{epFileName}'
+        epBackupPath = f'{root}/{self.epBackupPath}/{epFileName}.{dateDay}.zip' # 일별
 
         # feed
         feedFileName = f'feed_{catalog_id}_{feed_id}.tsv'
-        feedPath = f'{root}/data/{media}/feed/{feedFileName}'
-        feedBackupPath = f'{root}/data/{media}/feed/backup/{feedFileName}.{date}.zip'
+        feedFullPath = f'{root}/{self.feedPath}/{feedFileName}'
+        feedBackupPath = f'{root}/{self.feedBackupPath}/{feedFileName}.{dateDay}.zip' # 일별
 
-        # log
-        logFileName = f'log_{catalog_id}_{feed_id}.log'
-        logPath = f'{root}/data/{media}/log/{logFileName}'
-        logBackupPath = f'{root}/data/{media}/log/backup/{logFileName}.{date}.zip'
+        # convert log
+        logFileName = f'log_convert_{catalog_id}.{dateMonth}.log' # 월별
+        logFullPath = f'{root}/{self.convertLogPath}/{logFileName}'
 
-        config['ep']['path']= epPath
-        config['ep']['backupPath']=epBackupPath
-        config['feed'] = {'path': feedPath, 'backupPath': feedBackupPath}
-        config['log'] = {'path': logPath}
+        catalogConf['ep']['path']= epFullPath
+        catalogConf['ep']['backupPath']=epBackupPath
+        catalogConf['feed'] = {'path': feedFullPath, 'backupPath': feedBackupPath}
+        catalogConf['log'] = {'path': logFullPath}

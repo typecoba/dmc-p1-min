@@ -13,6 +13,8 @@ import uvicorn
 import json
 from starlette.responses import JSONResponse
 
+from common.Logger import Logger
+
 '''
 관리파일 분리
 -router
