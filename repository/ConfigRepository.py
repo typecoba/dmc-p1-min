@@ -7,7 +7,7 @@ from common.Logger import Logger
 
 class ConfigRepository():
 
-    # dev config local
+    # config
     config = Config('config.env')
     host = config('db_config_host')
     port = config('db_config_port')

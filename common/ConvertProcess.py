@@ -5,6 +5,7 @@ import zipfile
 from common.ConvertFilter import ConvertFilter
 from common.FileService import FileService
 from common.Logger import Logger
+from common.FacebookAPI import FacebookAPI
 import requests
 from starlette.config import Config
 
@@ -29,6 +30,8 @@ class ConvertProcess():
         self.convertFilter = ConvertFilter(catalogConfig) # 필터 클래스
         self.fileService = FileService() # 파일 매니저 클래스        
         self.fileService.setLogger(self.logger) # 파이프라인 공통로거 삽입
+        self.facebookAPI = FacebookAPI() # facebook api
+        self.facebookAPI.setLogger(self.logger)
                 
 
     # download - epLoad - convert - feedWrite - feedUpload
@@ -64,10 +67,10 @@ class ConvertProcess():
         
 
         # feed 백업
-        self.fileService.backup(self.catalogConfig['feed']['path'], self.catalogConfig['feed']['backupPath'])
+        self.fileService.zipped(self.catalogConfig['feed']['path'], self.catalogConfig['feed']['backupPath'])
 
-        # feed upload        
-        # self.feedUpload()
+        # feed upload      
+        await self.facebookAPI.upload(self.catalogConfig['info']['feed_id'], self.catalogConfig['feed']['path'])
         
         self.logger.info('==Feed Convert Process End==')
         

@@ -3,6 +3,7 @@ from common.ResponseModel import ResponseModel
 from common.FileService import FileService
 from common.ConvertProcess import ConvertProcess
 from common.Logger import Logger
+from common.FacebookAPI import FacebookAPI
 from repository.ConfigRepository import ConfigRepository
 from http import HTTPStatus
 from starlette.config import Config
@@ -10,10 +11,12 @@ from starlette.responses import FileResponse
 import time
 import os
 import asyncio
+import json
 
 router = APIRouter()
 configRepository = ConfigRepository()
 fileService = FileService()
+facebookAPI = FacebookAPI()
 
 # facebook기준 ep, feed 명칭으로 통일함
 
@@ -108,6 +111,13 @@ async def getFeedExport(catalog_id):
                             media_type='application/octet-stream',
                             filename=catalogConfig['feed']['path'].split('/')[-1])
     return response
+
+@router.get('/feed/upload/{catalog_id}')
+async def getFeedUpload(catalog_id):
+    catalogConfig = configRepository.findOne(catalog_id)    
+    response = await facebookAPI.upload(catalogConfig['info']['feed_id'], catalogConfig['feed']['path'])
+    return ResponseModel(content=json.loads(response))
+    
 
 
 # scheduled feed convert process

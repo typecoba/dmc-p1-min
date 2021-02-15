@@ -81,7 +81,7 @@ class FileService():
         async with aiohttp.ClientSession() as session:
             async with session.get(fromUrl) as response:
 
-                chunk_size = 1024*1024*10 # 10Mb
+                chunk_size = 1024*1024*10 # 10MB
                 async with aiofiles.open(toPath, 'wb') as f:
                     while True:
                         chunk = await response.content.read(chunk_size)
@@ -89,17 +89,25 @@ class FileService():
                         await f.write(chunk)
                         
                     # 파일백업
-                    self.backup(toPath, backupPath)
+                    self.zipped(toPath, backupPath)
         
-        
-                
+    # copy        
+    async def copy(self, fromPath, toPath):
+        chunk_size = 1024*1024*10 # 10MB
+        async with aiofiles.open(fromPath, 'rb') as fromFile:
+            async with aiofiles.open(toPath, 'wb') as toFile:
+                while True:
+                    chunk = await fromFile.read(chunk_size)
+                    if not chunk : break
+                    await toFile.write(chunk)
+                self.logger.info('Copy ' + str(self.getInfo(toFile)))
 
 
-    def backup(self, fromPath, toPath):        
+    def zipped(self, fromPath, toPath):        
         # 파일관리 (압축/7일 보관)
         zip = zipfile.ZipFile(toPath, 'w')
         zip.write(fromPath, compress_type=zipfile.ZIP_DEFLATED)       
-        self.logger.info('Backup '+ str(self.getInfo(toPath)))
+        self.logger.info('Zipped '+ str(self.getInfo(toPath)))
 
         # 7일 이전 삭제 (db로 관리해야할듯)        
         # delPath = '{toPath}.{date}.zip'.format(toPath=toPath, date=(datetime.now() + timedelta(days=-keepDay)).strftime('%Y%m%d'))
