@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from common.ResponseModel import ResponseModel
 from common.FileService import FileService
 from common.ConvertProcess import ConvertProcess
@@ -34,15 +34,50 @@ async def error():
 # 카탈로그 config 확인
 @router.get('/config', status_code=HTTPStatus.OK)
 async def getCatalogConfigs():
-    catalogConfig = configRepository.findAll()
-    return ResponseModel(content=catalogConfig)
+    result = configRepository.findAll()
+    return ResponseModel(content=result)
 
+@router.post('/config', status_code=HTTPStatus.OK)
+async def postCatalogConfig(request : Request):
+    data = await request.body() # validation은 추후
+    data = json.loads(data.decode('ascii'))
+    try : 
+        result = configRepository.insertOne(data)
+        return ResponseModel(content=str(result.inserted_id))
+    except Exception as e:        
+        raise HTTPException(status_code=400, detail=str(e))
+    
 
 @router.get('/config/{catalog_id}', status_code=HTTPStatus.OK)
 async def getCatalogConfig(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)
-    return ResponseModel(content=catalogConfig)
+    result = configRepository.findOne(catalog_id)
+    return ResponseModel(content=result)
 
+@router.put('/config/{catalog_id}', status_code=HTTPStatus.OK)
+async def putCatalogConfig(request : Request, catalog_id):     
+    oriValue = {'info.catalog_id':catalog_id}
+    newValue = json.loads((await request.body()).decode('ascii'))
+    
+    try :
+        result = configRepository.updateOne(oriValue, newValue)
+        return ResponseModel(content=result.matched_count)
+
+    except Exception as e:    
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete('/config/{catalog_id}', status_code=HTTPStatus.OK)
+async def delCatalogConfig(catalog_id):
+    # status값 업데이트 처리
+    oriValue = {'info.catalog_id': catalog_id}
+    newValue = {'$set' : {'status_flag':'del'}}
+    
+    try:
+        result = configRepository.updateOne(oriValue, newValue)
+        return ResponseModel(message='deleted')
+
+    except Exception as e :
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ep 정보 확인
 @router.get('/ep/info/{catalog_id}')

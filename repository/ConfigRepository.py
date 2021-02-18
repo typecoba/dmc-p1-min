@@ -25,6 +25,7 @@ class ConfigRepository():
     # pixel crawl data
     def __init__(self):
         self.mongo = self.getClient(self.host, int(self.port))
+        self.configMongo = self.mongo[self.db][self.col]
         
 
     # connect
@@ -37,15 +38,22 @@ class ConfigRepository():
 
     # config read
     def findAll(self):
-        catalogConfig = list(self.mongo[self.db][self.col].find({}, {'_id': False}))
+        catalogConfig = list(self.configMongo.find({}, {'_id': False}))
         for row in catalogConfig:
             self.setPath(row)
         return catalogConfig
 
     def findOne(self, catalog_id=None):
-        catalogConfig = self.mongo[self.db][self.col].find_one({'info.catalog_id': catalog_id}, {'_id': False})
+        catalogConfig = self.configMongo.find_one({'info.catalog_id': catalog_id}, {'_id': False})
         self.setPath(catalogConfig)
         return catalogConfig
+
+    def insertOne(self, catalogConfig=None):
+        result = self.configMongo.insert_one(catalogConfig)
+        return result
+
+    def updateOne(self, oriValue, newValue):
+        return self.configMongo.update_one(oriValue, newValue) # upsert=True
 
     # 파일저장 Path 생성
     def setPath(self, catalogConf):
