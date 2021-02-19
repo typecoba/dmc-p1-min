@@ -22,9 +22,7 @@ class FileService():
         pass
 
     def setLogger(self, logger=None):
-        self.logger = logger
-
-
+        self.logger = logger    
     
     def getInfo(self, filePath=None):
         if 'http' in filePath :
@@ -73,11 +71,16 @@ class FileService():
     # 파일이 있으면 중간부터 확인할 수 있나?
     # def getEpDetail():
 
+    async def getEp(self, fromUrl, toPath):
+        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
+        
+        if 'http' in fromUrl: # download            
+            return await self.download(fromUrl, toPath)
+        else: # file copy
+            return await self.copy(fromUrl, toPath)
     
-    # aiohttp 
-    async def download(self, fromUrl, toPath, backupPath):        
-        self.logger.info('Download '+str(self.getInfo(fromUrl)))
-
+    # aiohttp
+    async def download(self, fromUrl, toPath):
         async with aiohttp.ClientSession() as session:
             async with session.get(fromUrl) as response:
 
@@ -87,9 +90,10 @@ class FileService():
                         chunk = await response.content.read(chunk_size)
                         if not chunk : break
                         await f.write(chunk)
-                        
-                    # 파일백업
-                    self.zipped(toPath, backupPath)
+
+                    result = self.getInfo(toPath)
+                    self.logger.info('Download complete '+str(result))
+                    return result
         
     # copy        
     async def copy(self, fromPath, toPath):
@@ -100,10 +104,15 @@ class FileService():
                     chunk = await fromFile.read(chunk_size)
                     if not chunk : break
                     await toFile.write(chunk)
-                self.logger.info('Copy ' + str(self.getInfo(toFile)))
+                
+                result = self.getInfo(toPath)
+                self.logger.info('Copy ' + str(result))
+                return result
 
 
-    def zipped(self, fromPath, toPath):        
+    def zipped(self, fromPath, toPath):
+        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
+
         # 파일관리 (압축/7일 보관)
         zip = zipfile.ZipFile(toPath, 'w')
         zip.write(fromPath, compress_type=zipfile.ZIP_DEFLATED)       

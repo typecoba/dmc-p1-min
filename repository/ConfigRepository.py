@@ -43,22 +43,33 @@ class ConfigRepository():
             self.setPath(row)
         return catalogConfig
 
+
     def findOne(self, catalog_id=None):
         catalogConfig = self.configMongo.find_one({'info.catalog_id': catalog_id}, {'_id': False})
-        self.setPath(catalogConfig)
-        return catalogConfig
-
+        if catalogConfig != None :
+            self.setPath(catalogConfig)
+            return catalogConfig
+        else :
+            raise HTTPException(status_code=400, detail='config not found')
+                
+    
     def insertOne(self, catalogConfig=None):
-        result = self.configMongo.insert_one(catalogConfig)
-        return result
+        try:            
+            return self.configMongo.insert_one(catalogConfig)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
 
     def updateOne(self, oriValue, newValue):
-        return self.configMongo.update_one(oriValue, newValue) # upsert=True
+        try:
+            return self.configMongo.update_one(oriValue, newValue) # upsert=True
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
 
     # 파일저장 Path 생성
-    def setPath(self, catalogConf):
+    def setPath(self, catalogConf=None):        
         root = os.getcwd().replace('\\', '/')
-   
 
         catalog_id = catalogConf['info']['catalog_id']
         feed_id = catalogConf['info']['feed_id']
@@ -67,7 +78,7 @@ class ConfigRepository():
         dateMonth = datetime.now().strftime('%Y%m')
 
         # ep                
-        epFileName = f'ep_{catalog_id}_{feed_id}.{file_format}'            
+        epFileName = f'ep_{catalog_id}.{file_format}'
         epFullPath = f'{root}/{self.epPath}/{epFileName}'
         epBackupPath = f'{root}/{self.epBackupPath}/{epFileName}.{dateDay}.zip' # 일별
 

@@ -102,12 +102,13 @@ async def getEpExport(catalog_id):
 
 
 @router.get('/ep/download/{catalog_id}')
-async def getDownload(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)        
-    await fileService.download(catalogConfig['ep']['url'], catalogConfig['ep']['path'], catalogConfig['ep']['backupPath'])
+async def getDownload(catalog_id):    
+    catalogConfig = configRepository.findOne(catalog_id)       
+    result = await fileService.getEp(catalogConfig['ep']['url'], catalogConfig['ep']['path'])    
+    # 파일백업
+    fileService.zipped(catalogConfig['ep']['path'], catalogConfig['ep']['backupPath'])
+    return ResponseModel(message='download complete', content=result)
 
-    fileInfo = fileService.getInfo(catalogConfig['ep']['url'])    
-    return ResponseModel(message='download complete', content=fileInfo)
 
 # ep 내용확인
 # @router.get('/ep/detail/{catalog_id}')

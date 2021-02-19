@@ -123,8 +123,4 @@ class ConvertProcess():
                     sep='\t', 
                     mode=mode,
                     header=header, # 컬럼명 
-                    encoding='utf-8')
-
-    
-    def feedUpload(self):
-        pass
+                    encoding='utf-8')    
