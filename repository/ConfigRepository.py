@@ -8,17 +8,17 @@ from common.Logger import Logger
 class ConfigRepository():
 
     # config
-    config = Config('config.env')
-    host = config('db_config_host')
-    port = config('db_config_port')
-    db = config('db_config_database_name')
-    col = config('db_config_collection_name')
+    env = Config('config.env')
+    host = env('db_config_host')
+    port = env('db_config_port')
+    db = env('db_config_database_name')
+    col = env('db_config_collection_name')
 
-    epPath=config('path_ep')
-    epBackupPath=config('path_ep_backup')
-    feedPath=config('path_feed')
-    feedBackupPath=config('path_feed_backup')
-    convertLogPath=config('path_convert_logs')
+    epPath=env('path_ep')
+    epBackupPath=env('path_ep_backup')
+    feedPath=env('path_feed')
+    feedBackupPath=env('path_feed_backup')
+    convertLogPath=env('path_convert_logs')
 
     mongo = None
 
@@ -38,24 +38,24 @@ class ConfigRepository():
 
     # config read
     def findAll(self):
-        catalogConfig = list(self.configMongo.find({}, {'_id': False}))
-        for row in catalogConfig:
+        config = list(self.configMongo.find({}, {'_id': False}))
+        for row in config:
             self.setPath(row)
-        return catalogConfig
+        return config
 
 
     def findOne(self, catalog_id=None):
-        catalogConfig = self.configMongo.find_one({'info.catalog_id': catalog_id}, {'_id': False})
-        if catalogConfig != None :
-            self.setPath(catalogConfig)
-            return catalogConfig
+        config = self.configMongo.find_one({f'catalog.{catalog_id}': {'$exists':True}}, {'_id': False})
+        if config != None :
+            self.setPath(config)
+            return config
         else :
             raise HTTPException(status_code=400, detail='config not found')
                 
     
-    def insertOne(self, catalogConfig=None):
+    def insertOne(self, config=None):
         try:            
-            return self.configMongo.insert_one(catalogConfig)
+            return self.configMongo.insert_one(config)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -68,30 +68,46 @@ class ConfigRepository():
 
 
     # 파일저장 Path 생성
-    def setPath(self, catalogConf=None):        
+    def setPath(self, config=None):
         root = os.getcwd().replace('\\', '/')
 
-        catalog_id = catalogConf['info']['catalog_id']
-        feed_id = catalogConf['info']['feed_id']
-        file_format = catalogConf['ep']['format']
+        # catalog_id = config['catalog']['id']
+        epName = config['info']['name']
+        file_format = config['ep']['format']
         dateDay = datetime.now().strftime('%Y%m%d')
         dateMonth = datetime.now().strftime('%Y%m')
 
-        # ep                
-        epFileName = f'ep_{catalog_id}.{file_format}'
-        epFullPath = f'{root}/{self.epPath}/{epFileName}'
-        epBackupPath = f'{root}/{self.epBackupPath}/{epFileName}.{dateDay}.zip' # 일별
+        # ep
+        epPath = f'{root}/{self.epPath}'
+        epFileName = f'ep_{epName}.{file_format}'
+        epFullPath = epPath + epFileName
+        config['ep']['fullPath'] = epFullPath
 
-        # feed
-        feedFileName = f'feed_{catalog_id}_{feed_id}.tsv'
-        feedFullPath = f'{root}/{self.feedPath}/{feedFileName}'
-        feedBackupPath = f'{root}/{self.feedBackupPath}/{feedFileName}.{dateDay}.zip' # 일별
+        # catalog > feed
+        for catalog_id, catalog in config['catalog'].items(): 
+            # feed
+            for feed_id, feed in catalog['feed'].items():                
+                feedPath = f'{root}/{self.feedPath}{catalog_id}/' # catalog_id 폴더        
+                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}feed_{catalog_id}_{feed_id}.tsv'} # 서버 www접근폴더로 설정해야함            
+        
+            config['catalog'][catalog_id]['feed_temp'] = f'{feedPath}feed_{catalog_id}_temp.tsv' # convert된 임시파일            
 
-        # convert log
-        logFileName = f'log_convert_{catalog_id}.{dateMonth}.log' # 월별
-        logFullPath = f'{root}/{self.convertLogPath}/{logFileName}'
+            # update (update only)
+            if 'ep_update' in config :
+                # ep_update
+                epUpdatePath = f'{root}/{self.epPath}'
+                epUpdateFileName = f'ep_{epName}_update.{file_format}'
+                epUpdateFullPath = epUpdatePath + epUpdateFileName
+                config['ep_update']['fullPath'] = epUpdateFullPath
+                
+                # feed_update
+                feedUpdatePath = f'{root}/{self.feedPath}{catalog_id}/'
+                feedUpdateFileName = f'feed_{catalog_id}_update.tsv'
+                feedUpdateFullPath = feedUpdatePath + feedUpdateFileName                                            
+                config['catalog'][catalog_id]['feed_update'] = {'fullPath': feedUpdateFullPath}
 
-        catalogConf['ep']['path']= epFullPath
-        catalogConf['ep']['backupPath']=epBackupPath
-        catalogConf['feed'] = {'path': feedFullPath, 'backupPath': feedBackupPath}
-        catalogConf['log'] = {'path': logFullPath}
+        # log
+        logPath = f'{root}/{self.convertLogPath}'
+        logFileName = f'log_convert_{epName}.{dateMonth}.log' # 월별
+        logFullPath = logPath + logFileName
+        config['log'] = {'fullPath': logFullPath}

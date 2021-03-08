@@ -12,6 +12,7 @@ import time
 import os
 import asyncio
 import json
+import pycron
 
 router = APIRouter()
 configRepository = ConfigRepository()
@@ -25,6 +26,7 @@ facebookAPI = FacebookAPI()
 async def home():
     return ResponseModel(message='feedconvert_min_home')
 
+
 # error test
 @router.get('/error')
 async def error():
@@ -33,12 +35,13 @@ async def error():
 
 # 카탈로그 config 확인
 @router.get('/config', status_code=HTTPStatus.OK)
-async def getCatalogConfigs():
+async def getConfigs():
     result = configRepository.findAll()
     return ResponseModel(content=result)
 
+
 @router.post('/config', status_code=HTTPStatus.OK)
-async def postCatalogConfig(request : Request):
+async def postConfig(request : Request):
     data = await request.body() # validation은 추후
     data = json.loads(data.decode('ascii'))
     try : 
@@ -49,13 +52,14 @@ async def postCatalogConfig(request : Request):
     
 
 @router.get('/config/{catalog_id}', status_code=HTTPStatus.OK)
-async def getCatalogConfig(catalog_id):
+async def getConfig(catalog_id):
     result = configRepository.findOne(catalog_id)
     return ResponseModel(content=result)
 
+
 @router.put('/config/{catalog_id}', status_code=HTTPStatus.OK)
-async def putCatalogConfig(request : Request, catalog_id):     
-    oriValue = {'info.catalog_id':catalog_id}
+async def putConfig(request : Request, catalog_id):     
+    oriValue = {f'catalog.{catalog_id}':{'$exists':True}}
     newValue = json.loads((await request.body()).decode('ascii'))
     
     try :
@@ -67,10 +71,10 @@ async def putCatalogConfig(request : Request, catalog_id):
 
 
 @router.delete('/config/{catalog_id}', status_code=HTTPStatus.OK)
-async def delCatalogConfig(catalog_id):
+async def delConfig(catalog_id):
     # status값 업데이트 처리
-    oriValue = {'info.catalog_id': catalog_id}
-    newValue = {'$set' : {'status_flag':'del'}}
+    oriValue = {f'catalog.{catalog_id}': {'$exists':True}}
+    newValue = {'$set' : {'info.status':'deleted'}}
     
     try:
         result = configRepository.updateOne(oriValue, newValue)
@@ -79,34 +83,35 @@ async def delCatalogConfig(catalog_id):
     except Exception as e :
         raise HTTPException(status_code=400, detail=str(e))
 
+
 # ep 정보 확인
 @router.get('/ep/info/{catalog_id}')
 async def getEpInfo(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)
-    result = fileService.getInfo(catalogConfig['ep']['url'])
+    config = configRepository.findOne(catalog_id)
+    result = fileService.getInfo(config['ep']['url'])
     return ResponseModel(content=result)
 
 
 # ep 브라우저 다운로드
 @router.get('/ep/export/{catalog_id}')
 async def getEpExport(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)
+    config = configRepository.findOne(catalog_id)
     # exception
-    if os.path.isfile(catalogConfig['ep']['path']) == False:        
+    if os.path.isfile(config['ep']['fullPath']) == False:        
         raise HTTPException(400, 'feed file not found')
     # file export
-    response = FileResponse(catalogConfig['ep']['path'],
+    response = FileResponse(config['ep']['fullPath'],
                             media_type='application/octet-stream',
-                            filename=catalogConfig['ep']['path'].split('/')[-1])
+                            filename=config['ep']['fullPath'].split('/')[-1])
     return response
 
 
 @router.get('/ep/download/{catalog_id}')
 async def getDownload(catalog_id):    
-    catalogConfig = configRepository.findOne(catalog_id)       
-    result = await fileService.getEp(catalogConfig['ep']['url'], catalogConfig['ep']['path'])    
+    config = configRepository.findOne(catalog_id)       
+    result = await fileService.getEp(config['ep']['url'], config['ep']['fullPath'])    
     # 파일백업
-    fileService.zipped(catalogConfig['ep']['path'], catalogConfig['ep']['backupPath'])
+    # fileService.zipped(config['ep']['fullPath'], config['ep']['backupPath'])
     return ResponseModel(message='download complete', content=result)
 
 
@@ -115,18 +120,25 @@ async def getDownload(catalog_id):
 # async def getEpDetail():
 #     return {'message': 'get_ep_detail'}
 
+
 # ep 변환(만) 단위테스트
 @router.get('/ep/convert2feed/{catalog_id}')
 async def getEpConvert2feed(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)    
-    await ConvertProcess(catalogConfig).execute()
+    config = configRepository.findOne(catalog_id)
+
+    configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'converting'}})
+    await ConvertProcess(config).execute(catalog_id)
+    configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
+    
     return ResponseModel(message='convert complete')
 
+
 # 피드 정보 확인
-@router.get('/feed/info/{catalog_id}')
-async def getFeedInfo():
-    catalogConfig = configRepository.findOne(catalog_id)
-    result = fileService.getInfo(catalogConfig['feed']['path'])
+@router.get('/feed/info/{catalog_id}/{feed_id}')
+async def getFeedInfo(catalog_id, feed_id):
+    config = configRepository.findOne(catalog_id)
+    filePath = config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
+    result = fileService.getInfo(filePath)
     return ResponseModel(content=result)
 
 
@@ -135,39 +147,64 @@ async def getFeedInfo():
 # async def getFeedDetail():
 #     return {'message': 'get_feed_detail'}
 
+
 # 피드 브라우저 다운로드
-@router.get('/feed/export/{catalog_id}')
-async def getFeedExport(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)
+@router.get('/feed/export/{catalog_id}/{feed_id}')
+async def getFeedExport(catalog_id, feed_id):
+    config = configRepository.findOne(catalog_id)
     # exception
-    if os.path.isfile(catalogConfig['feed']['path']) == False:        
+    feedFullPath = config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
+    if os.path.isfile(feedFullPath) == False:
         raise HTTPException(400, 'feed file not found')
     # file export
-    response = FileResponse(catalogConfig['feed']['path'],
+    response = FileResponse(feedFullPath,
                             media_type='application/octet-stream',
-                            filename=catalogConfig['feed']['path'].split('/')[-1])
+                            filename=feedFullPath.split('/')[-1])
     return response
 
+
+# feed segment 분할
+@router.get('/feed/segmentation/{catalog_id}')
+async def getFeedSegmentation(catalog_id):
+    config = configRepository.findOne(catalog_id)
+    # exception
+    feedFullPath = config['catalog'][catalog_id]['feed_temp']
+    if os.path.isfile(feedFullPath) == False:
+        raise HTTPException(400, 'feed file not found')
+
+    convertProcess = ConvertProcess(config)
+    convertProcess.feedSegmentation(catalog_id=catalog_id)
+    return ResponseModel()
+
+
 @router.get('/feed/upload/{catalog_id}')
-async def getFeedUpload(catalog_id):
-    catalogConfig = configRepository.findOne(catalog_id)    
-    response = await facebookAPI.upload(catalogConfig['info']['feed_id'], catalogConfig['feed']['path'])
-    return ResponseModel(content=json.loads(response))
+async def getFeedUpload(catalog_id,feed_id):
+    config = configRepository.findOne(catalog_id)
+    # feed별 업로드
+    for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
+        await facebookAPI.upload(feed_id, feed['fullPath']+'.zip')
+
+    return ResponseModel(message='Facebook API upload complete')
     
 
 
 # scheduled feed convert process
-# @router.get('/schedule/convertprocess/{catalog_id}')
-# async def getConvertProcess(catalog_id):
-#     catalogConfig = configRepository.findOne(catalog_id)
-#     convertProcess = ConvertProcess(catalogConfig)
-#     convertProcess.execute()
-#     return ResponseModel()
+# 10분마다 호출하여 cron 체크 후 실행
+@router.get('/schedule')
+async def getSchedule():
+    configs = configRepository.findAll()
+    
+    for config in configs: # config 전체
+        print(config['info']['name'])
+        if pycron.is_now(config['ep']['cron']) : # cron check            
+            convertProcess = ConvertProcess(config)
 
-# 피드 api 업로드
-# @router.get('/feed/upload/{catalog_id}')
-# async def getFeedUpload():
-#     return {'message': 'get_feed_upload'}
+            for catalog_id in config['catalog'] : # catalog 전체
+                print(config['catalog'][catalog_id]['name'], catalog_id)
+                # await convertProcess.execute(catalog_id) # catalog_id 기준으로 실행
+        
+    return ResponseModel(content='test')
+
 
 
 @router.get('/test/async')

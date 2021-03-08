@@ -81,8 +81,11 @@ class FileService():
     
     # aiohttp
     async def download(self, fromUrl, toPath):
+        self.logger.info(f'Download : {fromUrl}')
+        self.logger.info(self.getInfo(fromUrl))
+        
         async with aiohttp.ClientSession() as session:
-            async with session.get(fromUrl) as response:
+            async with session.get(fromUrl, timeout=None) as response:
 
                 chunk_size = 1024*1024*10 # 10MB
                 async with aiofiles.open(toPath, 'wb') as f:
@@ -92,7 +95,8 @@ class FileService():
                         await f.write(chunk)
 
                     result = self.getInfo(toPath)
-                    self.logger.info('Download complete '+str(result))
+                    self.logger.info('Download complete : ' + str(result))
+                    response.close()
                     return result
         
     # copy        
@@ -111,14 +115,19 @@ class FileService():
 
 
     def zipped(self, fromPath, toPath):
-        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
-
-        # 파일관리 (압축/7일 보관)
+        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성    
         zip = zipfile.ZipFile(toPath, 'w')
         zip.write(fromPath, compress_type=zipfile.ZIP_DEFLATED)       
-        self.logger.info('Zipped '+ str(self.getInfo(toPath)))
+        self.logger.info('Zipped : '+ str(self.getInfo(toPath)))
 
         # 7일 이전 삭제 (db로 관리해야할듯)        
         # delPath = '{toPath}.{date}.zip'.format(toPath=toPath, date=(datetime.now() + timedelta(days=-keepDay)).strftime('%Y%m%d'))
         # if os.path.isfile(delPath):
         #     os.remove(delPath)
+
+    def delete(self, filePath):
+        if os.path.exists(filePath) == False: 
+            raise HTTPException(status_code=400, detail='file not found')
+        else:
+            os.remove(filePath)
+            self.logger.info('Delete : ' + filePath)
