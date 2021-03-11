@@ -127,7 +127,7 @@ async def getEpConvert2feed(catalog_id):
     config = configRepository.findOne(catalog_id)
 
     configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'converting'}})
-    await ConvertProcess(config).execute(catalog_id)
+    ConvertProcess(config).execute(catalog_id)
     configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
     
     return ResponseModel(message='convert complete')

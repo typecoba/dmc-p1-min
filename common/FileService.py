@@ -81,9 +81,8 @@ class FileService():
     
     # aiohttp
     async def download(self, fromUrl, toPath):
-        self.logger.info(f'Download : {fromUrl}')
-        self.logger.info(self.getInfo(fromUrl))
-        
+        self.logger.info(f'Download : {self.getInfo(fromUrl)}')        
+
         async with aiohttp.ClientSession() as session:
             async with session.get(fromUrl, timeout=None) as response:
 

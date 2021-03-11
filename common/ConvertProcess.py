@@ -35,7 +35,7 @@ class ConvertProcess():
 
 
     # download -> (epLoad -> filter -> feedWrite) -> feedUpload
-    async def execute(self, catalog_id=None):
+    def execute(self, catalog_id=None):
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
         
@@ -46,47 +46,57 @@ class ConvertProcess():
         if 'filter' in self.config :
             self.logger.info('Custom Filter : ' + str(self.config['filter']))
         
+                
+        epLoad = self.chunkLoad(chunkSize=500000,
+                                filePath=self.config['ep']['fullPath'],
+                                seperator=self.config['ep']['sep'],
+                                encoding=self.config['ep']['encoding'])
         
-        ## 전체 count 파악
-        self.chunkCount = 0
-        for num, chunkDF in enumerate(self.epLoad()):
-            self.chunkCount = num+1 # 마지막 chunk num만 확인            
-            [[chunkDF]]
-            gc.collect()
+
+        # chunk별 feed분할쓰기
+        feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
+        segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
+        print(feedIdList)
+        print(segmentIndexMap)
 
         ## convert 진행
-        for num, chunkDF in enumerate(self.epLoad()): # chunk load
+        totalCount=0
+        for num, chunkDF in enumerate(epLoad): # chunk load
             # filter
-            chunkDF = self.convertFilter.run(chunkDF) 
-
-            # write
-            self.feedWrite(num, self.config['catalog'][catalog_id]['feed_temp'], chunkDF) # write
-                        
-            # log            
-            percent = format(num/self.chunkCount*100, '.1f')
-            self.logger.info(f'..{percent}%')
+            chunkDF = self.convertFilter.run(chunkDF)            
+        
+            # makeSegment
+            for i, feed_id in enumerate(feedIdList):
+                segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[i])] # id끝자리 i
+                # segmentDF 생성
+                if num == 0 : # 초기화
+                    globals()[f'segmentDF_{i}'] = segmentDF
+                else :
+                    globals()[f'segmentDF_{i}'] = pd.concat([globals()[f'segmentDF_{i}'], segmentDF], ignore_index=True) # dataframe 합치기
+                
+            # log
+            totalCount = totalCount + chunkDF.shape[0]
+            self.logger.info(f'..{format(totalCount,",")} row processed')
 
             # memory clean
             del[[chunkDF]]
             gc.collect()
             # break
-        
 
-        # segment분할 (추후기능추가?)
-        self.feedSegmentation(catalog_id=catalog_id)
+        # 중복제거, feed write
+        for i, feed_id in enumerate(feedIdList):
+            globals()[f'segmentDF_{i}'] = globals()[f'segmentDF_{i}'].drop_duplicates(['id'], ignore_index=True)
+            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
+            self.feedWrite(feedPath=feedPath, df=globals()[f'segmentDF_{i}'])
+            self.fileService.zipped(feedPath, feedPath+".zip") # 압축
 
-        # feed 백업
-        
-        
-        # 압축, tempfile삭제, tsv파일 삭제, api upload
-        # for feed_id, feedDict in self.config['feed']['id'].items() :            
-            # self.fileService.zipped(feedDict['fullPath'], feedDict['fullPath']+".zip") # 압축
-            # self.fileService.delete(feedDict['fullPath']) # tsv삭제
             # await self.facebookAPI.upload(feed_id, feedDict['fullPath']+".zip"))
-        # self.fileService.delete(self.config['feed']['tempFilePath'])
-
-        # feed upload
-        
+            
+            
+            # memory clean
+            del[[globals()[f'segmentDF_{i}']]]
+            gc.collect()
+                    
         
         self.logger.info('==Feed Convert Process End==')        
             
@@ -96,58 +106,36 @@ class ConvertProcess():
         pass
 
     # ep데이터 로드
-    def epLoad(self):
+    def chunkLoad(self, chunkSize=100000, filePath=None, seperator=None, encoding='utf-8') :
         ''' 
         chunksize 단위로 로드
         title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
         컬럼 정리를 위해 원본 컬럼 리스트를 세팅해 로드
         '''
         # 원본 컬럼리스트
-        columns = pd.read_csv(self.config['ep']['fullPath'],
+        columns = pd.read_csv(filePath,
                                 nrows=1, #한줄만 읽음
-                                sep=self.config['ep']['sep'], # 명시
+                                sep=seperator, # 명시
                                 # lineterminator='\r',
-                                encoding=self.config['ep']['encoding'])
+                                encoding=encoding)
         columns = list(columns) 
         # print(columns)
 
-        result = pd.read_csv(self.config['ep']['fullPath'],
+        result = pd.read_csv(filePath,
                             nrows=None,
-                            chunksize=100000, # 일단 10만
+                            chunksize=chunkSize, # 일단 10만
                             header=0, # header row                            
                             dtype=str, # string type 인식
-                            sep=self.config['ep']['sep'], # 명시
+                            sep=seperator, # 명시
                             # lineterminator='\r',
                             error_bad_lines=False, # error skip
                             usecols=columns, # chunk에도 컬럼명 표기
-                            encoding=self.config['ep']['encoding'])
+                            encoding=encoding)
         return result
-
-    def feedLoad(self, feedPath):
-        # 원본 컬럼리스트
-        columns = pd.read_csv(feedPath,
-                                nrows=1, #한줄만 읽음
-                                sep='\t', # 명시
-                                # lineterminator='\r',
-                                encoding='utf-8')
-        columns = list(columns)
-        
-        result = pd.read_csv(feedPath,
-                            nrows=None,
-                            chunksize=100000, # 일단 10만
-                            header=0, # header row                            
-                            dtype=str, # string type 인식
-                            sep='\t', # 명시
-                            # lineterminator='\r',
-                            error_bad_lines=False, # error skip
-                            usecols=columns, # chunk에도 컬럼명 표기
-                            encoding='utf-8')
-        return result
-        
     
 
     #
-    def feedWrite(self, num, feedPath, df):
+    def feedWrite(self, num=0, feedPath=None, df=None):
         os.makedirs(os.path.dirname(feedPath), exist_ok=True) # 경로확인/생성
         if num == 0:
             mode='w' # 새로쓰기
@@ -165,43 +153,17 @@ class ConvertProcess():
 
 
     '''
-    중복제거
-    피드 조건별 분할
-    -중복제거하려면 어짜피 메모리에 다올려야함
-    -컬럼정리된 파일을 운용하는게 메모리 덜 먹음..(8G->2G)
+    id끝자리기준 0-9를 피드갯수에 대해 분포시키기위한 index map 생성    
     '''
-    def feedSegmentation(self, type='default', catalog_id=None):
-        if catalog_id==None : return None
-        
-        feedDict = self.config['catalog'][catalog_id]['feed']
-        self.logger.info(f'FeedSegmentation : {type:{type}, catalog_id:{catalog_id}, feed_id:{feedDict}}')
-
-        if type=='default' :
-            # 중복제거 test
-            tempFeed = pd.read_csv(self.config['catalog'][catalog_id]['feed_temp'],
-                        header=0, # header row
-                        dtype=str, # string type 인식
-                        sep='\t', # 명시
-                        # lineterminator='\r',
-                        error_bad_lines=False, # error skip
-                        encoding='utf-8')
-            
-            tempFeed = tempFeed.drop_duplicates(['id'],keep='first',ignore_index=True)            
-            countPerFeed = int(round(tempFeed.shape[0]/len(feedDict.keys())))
-
-            startRow = 0
-            endRow = startRow + countPerFeed
-            for feed_id in feedDict.keys() :
-                print(startRow,endRow)
-
-                feedDF = tempFeed[startRow:endRow] # 분할
-                feedDF.to_csv(feedDict[feed_id]['fullPath'], index=False, sep='\t', mode='w', encoding='utf-8') # feed write
-                self.fileService.zipped(feedDict[feed_id]['fullPath'], feedDict[feed_id]['fullPath']+".zip") # zipped
-                # self.fileService.delete(feedDict[feed_id]['fullPath']) # feed.tsv 삭제
-                
-                startRow = endRow+1
-                endRow = startRow+countPerFeed
-
-            # memory clean
-            del[[tempFeed]]
-            gc.collect()
+    def getSegmentIndexMap(self, feedCount=1): # 1,2,5,10으로만 분할
+        # 알고리즘으로 풀려고 했지만 가장 직관적
+        result = []
+        if feedCount==1:
+            result = [['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']]
+        elif feedCount==2:
+            result = [['0', '1', '2', '3', '4'],['5', '6', '7', '8', '9']]
+        elif feedCount==5:
+            result = [['0', '1'],['2', '3'],['4', '5'],['6', '7'],['8', '9']]
+        elif feedCount==10:
+            result = [['0'], ['1'], ['2'], ['3'], ['4'], ['5'], ['6'], ['7'], ['8'], ['9']]
+        return result

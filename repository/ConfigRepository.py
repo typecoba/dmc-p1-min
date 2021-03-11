@@ -90,7 +90,7 @@ class ConfigRepository():
                 feedPath = f'{root}/{self.feedPath}{catalog_id}/' # catalog_id 폴더        
                 config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}feed_{catalog_id}_{feed_id}.tsv'} # 서버 www접근폴더로 설정해야함            
         
-            config['catalog'][catalog_id]['feed_temp'] = f'{feedPath}feed_{catalog_id}_temp.tsv' # convert된 임시파일            
+            # config['catalog'][catalog_id]['feed_temp'] = f'{feedPath}feed_{catalog_id}_temp.tsv' # convert된 임시파일            
 
             # update (update only)
             if 'ep_update' in config :
