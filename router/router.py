@@ -106,13 +106,27 @@ async def getEpExport(catalog_id):
     return response
 
 
+# 
 @router.get('/ep/download/{catalog_id}')
-async def getDownload(catalog_id):    
-    config = configRepository.findOne(catalog_id)       
-    result = await fileService.getEp(config['ep']['url'], config['ep']['fullPath'])    
+async def getDownload(catalog_id):
+    config = configRepository.findOne(catalog_id)            
+    result = await fileService.getEp(config['ep']['url'], config['ep']['fullPath'])
     # 파일백업
     # fileService.zipped(config['ep']['fullPath'], config['ep']['backupPath'])
     return ResponseModel(message='download complete', content=result)
+
+
+# ep_update 경로 추가
+@router.get('/ep/download/{catalog_id}/update')
+async def getDownloadUpdate(catalog_id):
+    config = configRepository.findOne(catalog_id)
+    
+    if 'ep_update' in config:
+        result = await fileService.getEp(config['ep_update']['url'], config['ep_update']['fullPath'])
+        return ResponseModel(message='download complete', content=result)
+    else :
+        raise HTTPException(400, 'ep_update not found in config')
+    
 
 
 # ep 내용확인
@@ -127,10 +141,24 @@ async def getEpConvert2feed(catalog_id):
     config = configRepository.findOne(catalog_id)
 
     configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'converting'}})
-    ConvertProcess(config).execute(catalog_id)
+    ConvertProcess(config).execute(catalog_id=catalog_id)
     configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
     
     return ResponseModel(message='convert complete')
+
+# ep_update 변환 단위테스트
+@router.get('/ep/convert2feed/{catalog_id}/update')
+async def getEpConvert2feed(catalog_id):
+    config = configRepository.findOne(catalog_id)
+
+    if 'ep_update' in config :
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'converting'}})
+        ConvertProcess(config).execute(catalog_id=catalog_id, isUpdate=True)
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
+        return ResponseModel(message='convert complete')
+    else:
+        raise HTTPException(400, 'ep_update not found in config')
+        
 
 
 # 피드 정보 확인
@@ -194,16 +222,19 @@ async def getFeedUpload(catalog_id,feed_id):
 async def getSchedule():
     configs = configRepository.findAll()
     
-    for config in configs: # config 전체
-        print(config['info']['name'])
-        if pycron.is_now(config['ep']['cron']) : # cron check            
+    for config in configs: # config 전체        
+        # ep / ep_update
+        isUpdate = True if 'ep_update' in config else False         
+        
+        if pycron.is_now(config['ep']['cron']) or (isUpdate==True and pycron.is_now(config['ep_update']['cron'])): # cron check
             convertProcess = ConvertProcess(config)
 
-            for catalog_id in config['catalog'] : # catalog 전체
-                print(config['catalog'][catalog_id]['name'], catalog_id)
-                # await convertProcess.execute(catalog_id) # catalog_id 기준으로 실행
-        
-    return ResponseModel(content='test')
+            # 비동기
+            for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
+                print(catalogDict['name'], catalog_id)
+                # await convertProcess.execute(catalog_id=catalog_id, isUpdate=isUpdate) # catalog_id 기준으로 실행
+                
+    return ResponseModel(content='scheduled')
 
 
 

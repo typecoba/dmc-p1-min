@@ -84,27 +84,28 @@ class ConfigRepository():
         config['ep']['fullPath'] = epFullPath
 
         # catalog > feed
-        for catalog_id, catalog in config['catalog'].items(): 
+        for catalog_id, catalogDict in config['catalog'].items(): 
             # feed
-            for feed_id, feed in catalog['feed'].items():                
+            for feed_id, feed in catalogDict['feed'].items():                
                 feedPath = f'{root}/{self.feedPath}{catalog_id}/' # catalog_id 폴더        
                 config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}feed_{catalog_id}_{feed_id}.tsv'} # 서버 www접근폴더로 설정해야함            
-        
-            # config['catalog'][catalog_id]['feed_temp'] = f'{feedPath}feed_{catalog_id}_temp.tsv' # convert된 임시파일            
-
-            # update (update only)
-            if 'ep_update' in config :
-                # ep_update
-                epUpdatePath = f'{root}/{self.epPath}'
-                epUpdateFileName = f'ep_{epName}_update.{file_format}'
-                epUpdateFullPath = epUpdatePath + epUpdateFileName
-                config['ep_update']['fullPath'] = epUpdateFullPath
                 
-                # feed_update
-                feedUpdatePath = f'{root}/{self.feedPath}{catalog_id}/'
-                feedUpdateFileName = f'feed_{catalog_id}_update.tsv'
-                feedUpdateFullPath = feedUpdatePath + feedUpdateFileName                                            
-                config['catalog'][catalog_id]['feed_update'] = {'fullPath': feedUpdateFullPath}
+
+        # update (update only)
+        if 'ep_update' in config :
+            # ep_update
+            epUpdatePath = f'{root}/{self.epPath}'
+            epUpdateFileName = f'ep_{epName}_update.{file_format}'
+            epUpdateFullPath = epUpdatePath + epUpdateFileName
+            config['ep_update']['fullPath'] = epUpdateFullPath
+            
+            for catalog_id, catalogDict in config['catalog'].items():
+                for feed_id, feed in catalogDict['feed'].items():                    
+                    # feed_update
+                    updateFeedPath = f'{root}/{self.feedPath}{catalog_id}/'
+                    updateFeedFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'
+                    updateFeedFullPath = updateFeedPath + updateFeedFileName                                            
+                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = updateFeedFullPath
 
         # log
         logPath = f'{root}/{self.convertLogPath}'

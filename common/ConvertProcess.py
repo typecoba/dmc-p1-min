@@ -22,20 +22,21 @@ class ConvertProcess():
         '''
 
         # convert pipeline logger
-        # self.catalog_id = config['catalog']['id']  
+        # self.catalog_id = config['catalog']['id']
         epName = config['info']['name']
         logPath = config['log']['fullPath']
         self.logger = Logger(name=f'log_{epName}', filePath=logPath) # logger self.__class__.__qualname__
 
-        self.config = config                
-        self.fileService = FileService() # 파일 매니저 클래스        
+        self.config = config
+        self.fileService = FileService() # 파일 매니저 클래스
         self.fileService.setLogger(self.logger) # 파이프라인 공통로거 삽입
         self.facebookAPI = FacebookAPI() # facebook api
-        self.facebookAPI.setLogger(self.logger)    
+        self.facebookAPI.setLogger(self.logger)
 
 
     # download -> (epLoad -> filter -> feedWrite) -> feedUpload
-    def execute(self, catalog_id=None):
+    # ep_update인 경우 convert 후 upload시 update_only 플래그 활성
+    def execute(self, catalog_id=None, isUpdate=False):
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
         
@@ -46,12 +47,22 @@ class ConvertProcess():
         if 'filter' in self.config :
             self.logger.info('Custom Filter : ' + str(self.config['filter']))
         
-                
-        epLoad = self.chunkLoad(chunkSize=500000,
-                                filePath=self.config['ep']['fullPath'],
-                                seperator=self.config['ep']['sep'],
-                                encoding=self.config['ep']['encoding'])
+        if isUpdate :
+            epLoad = self.chunkLoad(
+                chunkSize=500000,
+                filePath=self.config['ep_update']['fullPath'],
+                seperator=self.config['ep_update']['sep'],
+                encoding=self.config['ep_update']['encoding']
+            )
         
+        else:
+            epLoad = self.chunkLoad(
+                chunkSize=500000,
+                filePath=self.config['ep']['fullPath'],
+                seperator=self.config['ep']['sep'],
+                encoding=self.config['ep']['encoding']
+            )
+            
 
         # chunk별 feed분할쓰기
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
@@ -63,7 +74,7 @@ class ConvertProcess():
         totalCount=0
         for num, chunkDF in enumerate(epLoad): # chunk load
             # filter
-            chunkDF = self.convertFilter.run(chunkDF)            
+            chunkDF = self.convertFilter.run(chunkDF)
         
             # makeSegment
             for i, feed_id in enumerate(feedIdList):
@@ -86,17 +97,22 @@ class ConvertProcess():
         # 중복제거, feed write
         for i, feed_id in enumerate(feedIdList):
             globals()[f'segmentDF_{i}'] = globals()[f'segmentDF_{i}'].drop_duplicates(['id'], ignore_index=True)
-            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
+            
+            if isUpdate :
+                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update']
+            else:
+                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
+            
             self.feedWrite(feedPath=feedPath, df=globals()[f'segmentDF_{i}'])
             self.fileService.zipped(feedPath, feedPath+".zip") # 압축
 
-            # await self.facebookAPI.upload(feed_id, feedDict['fullPath']+".zip"))
+            # await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedDict['fullPath']+".zip", isUpdateOnly=isUpdate))
             
             
             # memory clean
             del[[globals()[f'segmentDF_{i}']]]
             gc.collect()
-                    
+
         
         self.logger.info('==Feed Convert Process End==')        
             
@@ -153,15 +169,19 @@ class ConvertProcess():
 
 
     '''
-    id끝자리기준 0-9를 피드갯수에 대해 분포시키기위한 index map 생성    
+    id끝자리기준 0-9를 피드갯수에 대해 분포시키기위한 index map 생성
+    직관적/1,2,3,4,5,10으로만 분할
     '''
-    def getSegmentIndexMap(self, feedCount=1): # 1,2,5,10으로만 분할
-        # 알고리즘으로 풀려고 했지만 가장 직관적
+    def getSegmentIndexMap(self, feedCount=1): 
         result = []
         if feedCount==1:
             result = [['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']]
         elif feedCount==2:
             result = [['0', '1', '2', '3', '4'],['5', '6', '7', '8', '9']]
+        elif feedCount==3:
+            result = [['0','1','2'],['3','4','5'],['6','7','8','9']]
+        elif feedCount==4:
+            result = [['0','1'],['2','3'],['4','5','6'],['7','8','9']]
         elif feedCount==5:
             result = [['0', '1'],['2', '3'],['4', '5'],['6', '7'],['8', '9']]
         elif feedCount==10:
