@@ -84,11 +84,12 @@ class ConfigRepository():
         config['ep']['fullPath'] = epFullPath
 
         # catalog > feed
-        for catalog_id, catalogDict in config['catalog'].items(): 
+        for catalog_id, catalogDict in config['catalog'].items():
+            feedPath = f'{root}/{self.feedPath}{catalog_id}' # catalog_id 폴더
+            catalogDict['feed_all'] = {'fullPath': f'{feedPath}/feed_{catalog_id}_all.tsv', 'fullPath_update': f'{feedPath}/feed_{catalog_id}_update_all.tsv'}
             # feed
             for feed_id, feed in catalogDict['feed'].items():                
-                feedPath = f'{root}/{self.feedPath}{catalog_id}/' # catalog_id 폴더        
-                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}feed_{catalog_id}_{feed_id}.tsv'} # 서버 www접근폴더로 설정해야함            
+                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}/feed_{catalog_id}_{feed_id}.tsv'} # 서버 www접근폴더로 설정해야함
                 
 
         # update (update only)

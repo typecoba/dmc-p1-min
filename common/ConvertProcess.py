@@ -21,8 +21,7 @@ class ConvertProcess():
         config를 router에서 최초 한번 불러와서 전달하는게 좋을듯
         '''
 
-        # convert pipeline logger
-        # self.catalog_id = config['catalog']['id']
+        # convert pipeline logger        
         epName = config['info']['name']
         logPath = config['log']['fullPath']
         self.logger = Logger(name=f'log_{epName}', filePath=logPath) # logger self.__class__.__qualname__
@@ -34,57 +33,55 @@ class ConvertProcess():
         self.facebookAPI.setLogger(self.logger)
 
 
-    # download -> (epLoad -> filter -> feedWrite) -> feedUpload
-    # ep_update인 경우 convert 후 upload시 update_only 플래그 활성
+    # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
+    # ep_update인 경우 convert 후 upload시 isUpdate 플래그 활성
     def execute(self, catalog_id=None, isUpdate=False):
+        
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
+        self.convertFilter.setLogger(self.logger)
         
         # 1. download
         # await self.fileService.download(self.config['ep']['url'], self.config['ep']['fullPath'])
 
         # 2. convert
-        if 'filter' in self.config :
-            self.logger.info('Custom Filter : ' + str(self.config['filter']))
-        
-        if isUpdate :
-            epLoad = self.chunkLoad(
-                chunkSize=500000,
-                filePath=self.config['ep_update']['fullPath'],
-                seperator=self.config['ep_update']['sep'],
-                encoding=self.config['ep_update']['encoding']
-            )
-        
-        else:
-            epLoad = self.chunkLoad(
-                chunkSize=500000,
-                filePath=self.config['ep']['fullPath'],
-                seperator=self.config['ep']['sep'],
-                encoding=self.config['ep']['encoding']
-            )
-            
-
-        # chunk별 feed분할쓰기
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
+        feedPathKey = 'fullPath_update' if isUpdate else 'fullPath'
+        epKey = 'ep_update' if isUpdate else 'ep'
+        
         print(feedIdList)
-        print(segmentIndexMap)
+        # print(segmentIndexMap)
+        
+        
+        epLoad = self.chunkLoad(
+            chunkSize=500000,
+            filePath=self.config[epKey]['fullPath'],
+            seperator=self.config[epKey]['sep'],
+            encoding=self.config[epKey]['encoding']
+        )                            
 
         ## convert 진행
         totalCount=0
         for num, chunkDF in enumerate(epLoad): # chunk load
             # filter
             chunkDF = self.convertFilter.run(chunkDF)
+
+            # 중복제거 *chunk내부만 검사.. test
+            chunkDF = chunkDF.drop_duplicates(['id'], ignore_index=True)
         
-            # makeSegment
+            # write *전체포함 파일 생성 (머천센터등 필요)
+            feedPath = self.config['catalog'][catalog_id]['feed_all'][feedPathKey]
+            self.feedWrite(num, feedPath=feedPath, df=chunkDF)
+
+            # makeSegment *복수피드인경우 세그먼트 분리됨
             for i, feed_id in enumerate(feedIdList):
                 segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[i])] # id끝자리 i
-                # segmentDF 생성
-                if num == 0 : # 초기화
-                    globals()[f'segmentDF_{i}'] = segmentDF
-                else :
-                    globals()[f'segmentDF_{i}'] = pd.concat([globals()[f'segmentDF_{i}'], segmentDF], ignore_index=True) # dataframe 합치기
-                
+                # write                
+                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
+                self.feedWrite(num, feedPath=feedPath, df=segmentDF)
+                                        
+
             # log
             totalCount = totalCount + chunkDF.shape[0]
             self.logger.info(f'..{format(totalCount,",")} row processed')
@@ -92,28 +89,20 @@ class ConvertProcess():
             # memory clean
             del[[chunkDF]]
             gc.collect()
-            # break
-
-        # 중복제거, feed write
-        for i, feed_id in enumerate(feedIdList):
-            globals()[f'segmentDF_{i}'] = globals()[f'segmentDF_{i}'].drop_duplicates(['id'], ignore_index=True)
-            
-            if isUpdate :
-                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update']
-            else:
-                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
-            
-            self.feedWrite(feedPath=feedPath, df=globals()[f'segmentDF_{i}'])
-            self.fileService.zipped(feedPath, feedPath+".zip") # 압축
-
-            # await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedDict['fullPath']+".zip", isUpdateOnly=isUpdate))
-            
-            
-            # memory clean
-            del[[globals()[f'segmentDF_{i}']]]
-            gc.collect()
-
+            # break        
         
+
+        # 압축 / 백업 / 업로드
+        feedPath = self.config['catalog'][catalog_id]['feed_all'][feedPathKey]
+        self.fileService.zipped(feedPath, feedPath+".zip") # 압축
+        self.fileService.delete(feedPath) # tsv 제거
+        for i, feed_id in enumerate(feedIdList):                        
+            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
+            self.fileService.zipped(feedPath, feedPath+".zip") # 압축
+            self.fileService.delete(feedPath) # tsv 제거                        
+            # self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdateOnly=isUpdate) # api 업로드
+
+    
         self.logger.info('==Feed Convert Process End==')        
             
 
