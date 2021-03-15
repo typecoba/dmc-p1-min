@@ -1,13 +1,13 @@
 import aiohttp
 import requests
 from urllib import parse
-from starlette.config import Config
 from common.Logger import Logger
+from common.Properties import Properties
 
 class FacebookAPI():
     # config
-    config = Config('config.env')
-    access_token = config('access_token')
+    prop = Properties()
+    access_token = prop.getFacebookAccessToken
 
     def __init__(self):        
         self.logger = Logger() # 기본로거

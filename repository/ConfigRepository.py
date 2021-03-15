@@ -4,37 +4,28 @@ from starlette.config import Config
 from datetime import datetime, timedelta
 import os
 from common.Logger import Logger
+from common.Properties import Properties
 
 class ConfigRepository():
-
-    # config
-    env = Config('config.env')
-    host = env('db_config_host')
-    port = env('db_config_port')
-    db = env('db_config_database_name')
-    col = env('db_config_collection_name')
-
-    epPath=env('path_ep')
-    epBackupPath=env('path_ep_backup')
-    feedPath=env('path_feed')
-    feedBackupPath=env('path_feed_backup')
-    convertLogPath=env('path_convert_logs')
-
-    mongo = None
+    prop = None # properties 객체
+    mongo = None # mongo client
 
     # pixel crawl data
     def __init__(self):
-        self.mongo = self.getClient(self.host, int(self.port))
-        self.configMongo = self.mongo[self.db][self.col]
+        self.prop = Properties()
+        self.mongo = self.getClient(self.prop.getHost(), int(self.prop.getPort()))
+        self.configMongo = self.mongo[self.prop.getDatabase()][self.prop.getCollection()]
+        
         
 
     # connect
     def getClient(self, host, port):
         try:
             result = MongoClient(host, port)
-        except:
-            raise HTTPException(status_code=400, detail="mongo client connect error")
-        return result
+            return result
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
 
     # config read
     def findAll(self):
@@ -69,47 +60,45 @@ class ConfigRepository():
 
     # 파일저장 Path 생성
     def setPath(self, config=None):
-        root = os.getcwd().replace('\\', '/')
-
+        
         # catalog_id = config['catalog']['id']
         epName = config['info']['name']
-        file_format = config['ep']['format']
+        epFormat = config['ep']['format']
         dateDay = datetime.now().strftime('%Y%m%d')
         dateMonth = datetime.now().strftime('%Y%m')
 
         # ep
-        epPath = f'{root}/{self.epPath}'
-        epFileName = f'ep_{epName}.{file_format}'
-        epFullPath = epPath + epFileName
+        epFileName = f'ep_{epName}.{epFormat}'
+        epFullPath = f'{self.prop.getEpPath()}/{epFileName}'
         config['ep']['fullPath'] = epFullPath
 
         # catalog > feed
         for catalog_id, catalogDict in config['catalog'].items():
-            feedPath = f'{root}/{self.feedPath}{catalog_id}' # catalog_id 폴더
-            catalogDict['feed_all'] = {'fullPath': f'{feedPath}/feed_{catalog_id}_all.tsv', 'fullPath_update': f'{feedPath}/feed_{catalog_id}_update_all.tsv'}
+            feedPath = f'{self.prop.getFeedPath()}/{catalog_id}' # catalog_id 폴더
+            feedAllFileName = f'feed_{catalog_id}.tsv'
+            feedAllUpdateFileName = f'feed_{catalog_id}_update_all.tsv'
+            
+            # 피드가 한개인경우엔 의미없음
+            catalogDict['feed_all'] = {'fullPath': f'{feedPath}/{feedAllFileName}', 
+                                       'fullPath_update': f'{feedPath}/{feedAllUpdateFileName}'}
             # feed
-            for feed_id, feed in catalogDict['feed'].items():                
-                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}/feed_{catalog_id}_{feed_id}.tsv'} # 서버 www접근폴더로 설정해야함
+            for feed_id, feed in catalogDict['feed'].items():
+                feedFileName = f'feed_{catalog_id}_{feed_id}.tsv'
+                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}/{feedFileName}'} # 서버 www접근폴더로 설정해야함
                 
 
         # update (update only)
         if 'ep_update' in config :
             # ep_update
-            epUpdatePath = f'{root}/{self.epPath}'
-            epUpdateFileName = f'ep_{epName}_update.{file_format}'
-            epUpdateFullPath = epUpdatePath + epUpdateFileName
-            config['ep_update']['fullPath'] = epUpdateFullPath
+            config['ep_update']['fullPath'] = f'{self.prop.getEpPath()}/ep_{epName}_update.{epFormat}'
             
             for catalog_id, catalogDict in config['catalog'].items():
                 for feed_id, feed in catalogDict['feed'].items():                    
                     # feed_update
-                    updateFeedPath = f'{root}/{self.feedPath}{catalog_id}/'
-                    updateFeedFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'
-                    updateFeedFullPath = updateFeedPath + updateFeedFileName                                            
-                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = updateFeedFullPath
+                    updateFeedPath = f'{self.prop.getFeedPath()}/{catalog_id}'
+                    updateFeedFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'              
+                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{updateFeedPath}/{updateFeedFileName}'
 
-        # log
-        logPath = f'{root}/{self.convertLogPath}'
+        # convert log
         logFileName = f'log_convert_{epName}.{dateMonth}.log' # 월별
-        logFullPath = logPath + logFileName
-        config['log'] = {'fullPath': logFullPath}
+        config['log'] = {'fullPath': f'{self.prop.getLogPath()}/{logFileName}'}
