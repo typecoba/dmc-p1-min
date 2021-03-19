@@ -64,19 +64,18 @@ class FileService():
         return result
 
 
-    '''
-    EP의 경우 http download만 있음
-    download도 chunk로 받아야함
-    test위해 local file등과같은 경우도 처리
-    비동기 지원해야함
-    '''
+    
     # 파일이 없으면 첫부분정도만 확인할수 있나?
     # 파일이 있으면 중간부터 확인할 수 있나?
     # def getEpDetail():
 
 
-
-    # epdownload check & download
+    '''
+    [epdownload check & download]
+    1. 원본 ep 와 local ep 시간비교
+    2. config status 이용하여 download lock
+    3. ep update 플래그로 config 연동        
+    '''    
     async def getEpDownload(self, catalog_id=None, epType=''): # type = '' or 'update'
         configRepository = ConfigRepository()        
         config = configRepository.findOne(catalog_id)
