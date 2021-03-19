@@ -68,67 +68,65 @@ class FileService():
     EP의 경우 http download만 있음
     download도 chunk로 받아야함
     test위해 local file등과같은 경우도 처리
-
     비동기 지원해야함
     '''
     # 파일이 없으면 첫부분정도만 확인할수 있나?
     # 파일이 있으면 중간부터 확인할 수 있나?
     # def getEpDetail():
 
-    async def getEp(self, fromUrl, toPath):
-        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
-        
-        if 'http' in fromUrl: # download            
-            return await self.download(fromUrl, toPath)
-        else: # file copy
-            return await self.copy(fromUrl, toPath)
-    
+
 
     # epdownload check & download
-    async def getEpDownload(self, catalog_id):
-        configRepository = ConfigRepository()
-        
+    async def getEpDownload(self, catalog_id=None, epType=''): # type = '' or 'update'
+        configRepository = ConfigRepository()        
         config = configRepository.findOne(catalog_id)
 
+        # ep / ep_update flag
+        epKey = 'ep_update' if epType=='update' else 'ep'
+
+        # ep_update 체크
+        if epType == 'update' and 'ep_update' not in config:            
+            raise HTTPException(400, 'ep_update not found in config')
+
         # 원본파일 변동 확인
-        if os.path.isfile(config['ep']['fullPath']) : # 다운받은 파일이 있는 경우
-            epOriInfo = self.getInfo(config['ep']['url'])           # 오리지널 ep info
+        if os.path.isfile(config[epKey]['fullPath']) : # 다운받은 파일이 있는 경우
+            epOriInfo = self.getInfo(config[epKey]['url'])          # 오리지널 ep info
             epOriSize = epOriInfo['size']                           # 오리지널 ep size
             epOriModDate = parser.parse(epOriInfo['last_moddate'])  # 오리지널 ep 생성시간
-            epInfo = self.getInfo(config['ep']['fullPath'])         # 로컬 ep info
+            epInfo = self.getInfo(config[epKey]['fullPath'])        # 로컬 ep info
             epSize = epInfo['size']                                 # 로컬 ep size
             epModDate = parser.parse(epInfo['last_moddate'])        # 로컬 ep 생성시간
 
             if epModDate > epOriModDate : #  or epSize == epOriSize:
                 content = {
-                    'server':{'url':config['ep']['url'], 'moddate': epOriModDate},
-                    'local': {'path':config['ep']['fullPath'], 'moddate': epModDate}
+                    'server':{'url':config[epKey]['url'], 'moddate': epOriModDate},
+                    'local': {'path':config[epKey]['fullPath'], 'moddate': epModDate}
                 }
                 return ResponseModel(message='file not changed', content=content)
 
         # 서버단위 중복 다운로드 방지
-        if config['ep']['status'] == Properties.STATUS_DOWNLOADING:            
+        if config[epKey]['status'] == Properties.STATUS_DOWNLOADING:            
             return ResponseModel(message='already start download...', content=None)
 
 
         # ep download
         try:
-            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{'ep.status':Properties.STATUS_DOWNLOADING}})
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':Properties.STATUS_DOWNLOADING}})
 
             # 다운로드
-            if 'http' in config['ep']['url']: # download
-                result = await self.download(config['ep']['url'], config['ep']['fullPath'])
-            else: # file copy
-                result = await self.copy(config['ep']['url'], config['ep']['fullPath'])
+            if 'http' in config[epKey]['url']: # download
+                result = await self.download(config[epKey]['url'], config[epKey]['fullPath'])
+            else: # file copy *local test용
+                result = await self.copy(config[epKey]['url'], config[epKey]['fullPath'])
 
-            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{'ep.status':'', 'ep.moddate':Utils.nowtime()}})
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':'', f'{epKey}.moddate':Utils.nowtime()}})
             # 파일백업
-            # fileService.zipped(config['ep']['fullPath'], config['ep']['backupPath'])
+            # fileService.zipped(config[epKey]['fullPath'], config[epKey]['backupPath'])
 
             return ResponseModel(message='download complete', content=result)            
 
         except Exception as e :
-            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{'ep.status':''}})
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':''}})
             raise HTTPException(status_code=400, detail=str(e))
                 
         

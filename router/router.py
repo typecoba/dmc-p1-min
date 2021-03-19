@@ -123,35 +123,11 @@ async def getEpExport(catalog_id):
 async def getDownload(catalog_id):    
     return  await fileService.getEpDownload(catalog_id)
 
-    
-
-    
-    
-
 
 # ep_update 경로 추가
 @router.get('/ep/download/{catalog_id}/update')
-async def getDownloadUpdate(catalog_id):
-    config = configRepository.findOne(catalog_id)
-    
-    if 'ep_update' not in config:
-        raise HTTPException(400, 'ep_update not found in config')
-
-    response = fileService.getEpDownloadCheck(config)
-    if response['flag'] == False :
-        return ResponseModel(message=response['message'], content=response['content'])
-
-    try : 
-        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'ep_update.status':properties.STATUS_DOWNLOADING}})
-        result = await fileService.getEp(config['ep_update']['url'], config['ep_update']['fullPath'])
-        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'ep_update.status':''}})
-        return ResponseModel(message='download complete', content=result)
-
-    except Exception as e : 
-        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'ep_update.status':''}})
-        raise HTTPException(400, str(e))
-        
-
+async def getDownloadUpdate(catalog_id):    
+    return await fileService.getEpDownload(catalog_id, 'update')
 
     
 
