@@ -1,5 +1,7 @@
 import logging, logging.handlers, logging.config
 import os, datetime
+# from log4mongo.handlers import MongoHandler
+
 '''
 logging모듈은 내부적으로 싱글톤으로 만들어짐
 custom logger 선언시 하나의 인스턴스에 handler를 계속 추가하게되므로
@@ -55,6 +57,8 @@ class Logger():
         # logger
         # name 기준으로 싱글톤으로 생성
         self.logger = logging.getLogger(name) 
+        # self.logger.addHandler(MongoHandler(host='localhost'))
+        
 
     def info(self, msg=None):
         self.logger.info(msg)

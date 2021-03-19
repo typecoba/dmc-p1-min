@@ -60,8 +60,6 @@ class ConfigRepository():
 
     # 파일저장 Path 생성
     def setPath(self, config=None):
-        
-        # catalog_id = config['catalog']['id']
         epName = config['info']['name']
         epFormat = config['ep']['format']
         dateDay = datetime.now().strftime('%Y%m%d')
@@ -75,7 +73,7 @@ class ConfigRepository():
         # catalog > feed
         for catalog_id, catalogDict in config['catalog'].items():
             feedPath = f'{self.prop.getFeedPath()}/{catalog_id}' # catalog_id 폴더
-            feedAllFileName = f'feed_{catalog_id}.tsv'
+            feedAllFileName = f'feed_{catalog_id}_all.tsv'
             feedAllUpdateFileName = f'feed_{catalog_id}_update_all.tsv'
             
             # 피드가 한개인경우엔 의미없음

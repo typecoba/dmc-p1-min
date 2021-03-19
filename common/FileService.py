@@ -11,51 +11,55 @@ import aiofiles
 from starlette.config import Config
 from fastapi import HTTPException
 from common.Logger import Logger
-from common.Util import *
+from common.Utils import Utils
+from common.Properties import Properties
+from common.ResponseModel import ResponseModel
+from repository.ConfigRepository import ConfigRepository
 import zipfile
+from pytz import timezone
 
-from asyncio.tasks import events
 
-class FileService():    
+
+class FileService():
     def __init__(self):
         self.logger = Logger() # 기본로거 root
-        pass
 
     def setLogger(self, logger=None):
         self.logger = logger    
     
-    def getInfo(self, filePath=None):
+    def getInfo(self, filePath=None):        
         if 'http' in filePath :
             # file path
             with request.urlopen(filePath) as f:
-                result = f.info()
+                response = f.info()
                 f.close()
-            
+
+            # str-> datetime -> timezone 적용 -> formatting
+            mdatetime = parser.parse(response['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %Z')
+
             result = {
                 'url': filePath,
-                'size': Util.sizeof_fmt(int(result['Content-Length'])),
-                'credate': parser.parse(result['Date']).strftime('%Y-%m-%d %H:%M:%S'),
-                'moddate': parser.parse(result['Last-Modified']).strftime('%Y-%m-%d %H:%M:%S'),                
-            }
-
+                'size': Utils.sizeof_fmt(int(response['Content-Length'])),                
+                'last_moddate': mdatetime
+            }            
 
         else : # 파일인경우
+            # file check
             if os.path.exists(filePath) == False: 
-                raise HTTPException(status_code=400, detail='file not found')
-
-            # exists = os.path.exists(filePath) # 파일 존재여부
+                return None
             size = os.path.getsize(filePath) # 파일 크기
-            ctime = os.path.getctime(filePath)  # 생성시간
-            mtime = os.path.getmtime(filePath)  # 수정시간            
-            atime = os.path.getatime(filePath)  # 마지막 엑세스시간            
+            mtime = os.path.getmtime(filePath)  # 수정시간
+            # exists = os.path.exists(filePath) # 파일 존재여부
+            # ctime = os.path.getctime(filePath)  # 생성시간
+            # atime = os.path.getatime(filePath)  # 마지막 엑세스시간
             
+            # timestamp -> datetime -> timezone 적용 -> formatting
+            mdatetime = datetime.fromtimestamp(mtime, timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %Z')
             result = {
-                    'path': filePath,
-                    'size': Util.sizeof_fmt(size),
-                    'credate': datetime.utcfromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S'),
-                    'moddate': datetime.utcfromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S'),
-                    # 'accessdate': datetime.utcfromtimestamp(atime).strftime('%Y-%m-%d %H:%M:%S'), 
-                    }            
+                'path': filePath,
+                'size': Utils.sizeof_fmt(size),
+                'last_moddate': mdatetime
+            }
         
         return result
 
@@ -79,10 +83,61 @@ class FileService():
         else: # file copy
             return await self.copy(fromUrl, toPath)
     
+
+    # epdownload check & download
+    async def getEpDownload(self, catalog_id):
+        configRepository = ConfigRepository()
+        
+        config = configRepository.findOne(catalog_id)
+
+        # 원본파일 변동 확인
+        if os.path.isfile(config['ep']['fullPath']) : # 다운받은 파일이 있는 경우
+            epOriInfo = self.getInfo(config['ep']['url'])           # 오리지널 ep info
+            epOriSize = epOriInfo['size']                           # 오리지널 ep size
+            epOriModDate = parser.parse(epOriInfo['last_moddate'])  # 오리지널 ep 생성시간
+            epInfo = self.getInfo(config['ep']['fullPath'])         # 로컬 ep info
+            epSize = epInfo['size']                                 # 로컬 ep size
+            epModDate = parser.parse(epInfo['last_moddate'])        # 로컬 ep 생성시간
+
+            if epModDate > epOriModDate : #  or epSize == epOriSize:
+                content = {
+                    'server':{'url':config['ep']['url'], 'moddate': epOriModDate},
+                    'local': {'path':config['ep']['fullPath'], 'moddate': epModDate}
+                }
+                return ResponseModel(message='file not changed', content=content)
+
+        # 서버단위 중복 다운로드 방지
+        if config['ep']['status'] == Properties.STATUS_DOWNLOADING:            
+            return ResponseModel(message='already start download...', content=None)
+
+
+        # ep download
+        try:
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{'ep.status':Properties.STATUS_DOWNLOADING}})
+
+            # 다운로드
+            if 'http' in config['ep']['url']: # download
+                result = await self.download(config['ep']['url'], config['ep']['fullPath'])
+            else: # file copy
+                result = await self.copy(config['ep']['url'], config['ep']['fullPath'])
+
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{'ep.status':'', 'ep.moddate':Utils.nowtime()}})
+            # 파일백업
+            # fileService.zipped(config['ep']['fullPath'], config['ep']['backupPath'])
+
+            return ResponseModel(message='download complete', content=result)            
+
+        except Exception as e :
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{'ep.status':''}})
+            raise HTTPException(status_code=400, detail=str(e))
+                
+        
+
+
+
     # aiohttp
     async def download(self, fromUrl, toPath):
-        self.logger.info(f'Download : {self.getInfo(fromUrl)}')        
-
+        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
         async with aiohttp.ClientSession() as session:
             async with session.get(fromUrl, timeout=None) as response:
 
@@ -97,9 +152,13 @@ class FileService():
                     self.logger.info('Download complete : ' + str(result))
                     response.close()
                     return result
+
+
+
         
     # copy        
     async def copy(self, fromPath, toPath):
+        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
         chunk_size = 1024*1024*10 # 10MB
         async with aiofiles.open(fromPath, 'rb') as fromFile:
             async with aiofiles.open(toPath, 'wb') as toFile:
@@ -115,8 +174,8 @@ class FileService():
 
     def zipped(self, fromPath, toPath):
         os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성    
-        zip = zipfile.ZipFile(toPath, 'w')
-        zip.write(fromPath, compress_type=zipfile.ZIP_DEFLATED)       
+        zip = zipfile.ZipFile(toPath, 'w', zipfile.ZIP_DEFLATED)
+        zip.write(fromPath, arcname=os.path.basename(fromPath)) # 압축내용에 경로제거
         self.logger.info('Zipped : '+ str(self.getInfo(toPath)))
 
         # 7일 이전 삭제 (db로 관리해야할듯)        
@@ -129,4 +188,4 @@ class FileService():
             raise HTTPException(status_code=400, detail='file not found')
         else:
             os.remove(filePath)
-            self.logger.info('Delete : ' + filePath)
+            self.logger.info('Delete : ' + filePath)    

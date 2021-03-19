@@ -4,20 +4,28 @@ from common.FileService import FileService
 from common.ConvertProcess import ConvertProcess
 from common.Logger import Logger
 from common.FacebookAPI import FacebookAPI
+from common.Utils import Utils
+from common.Properties import Properties
 from repository.ConfigRepository import ConfigRepository
 from http import HTTPStatus
 from starlette.config import Config
 from starlette.responses import FileResponse
 import time
+from datetime import datetime
 import os
 import asyncio
 import json
 import pycron
+import aiofiles
+from dateutil import parser
+
 
 router = APIRouter()
 configRepository = ConfigRepository()
 fileService = FileService()
 facebookAPI = FacebookAPI()
+utils = Utils()
+properties = Properties()
 
 # facebook기준 ep, feed 명칭으로 통일함
 
@@ -88,7 +96,11 @@ async def delConfig(catalog_id):
 @router.get('/ep/info/{catalog_id}')
 async def getEpInfo(catalog_id):
     config = configRepository.findOne(catalog_id)
-    result = fileService.getInfo(config['ep']['url'])
+    result = {}
+    result['ep'] = fileService.getInfo(config['ep']['url'])
+    if 'ep_update' in config :
+        result['ep_update'] = fileService.getInfo(config['ep_update']['url'])
+
     return ResponseModel(content=result)
 
 
@@ -108,12 +120,13 @@ async def getEpExport(catalog_id):
 
 # 
 @router.get('/ep/download/{catalog_id}')
-async def getDownload(catalog_id):
-    config = configRepository.findOne(catalog_id)            
-    result = await fileService.getEp(config['ep']['url'], config['ep']['fullPath'])
-    # 파일백업
-    # fileService.zipped(config['ep']['fullPath'], config['ep']['backupPath'])
-    return ResponseModel(message='download complete', content=result)
+async def getDownload(catalog_id):    
+    return  await fileService.getEpDownload(catalog_id)
+
+    
+
+    
+    
 
 
 # ep_update 경로 추가
@@ -121,11 +134,25 @@ async def getDownload(catalog_id):
 async def getDownloadUpdate(catalog_id):
     config = configRepository.findOne(catalog_id)
     
-    if 'ep_update' in config:
-        result = await fileService.getEp(config['ep_update']['url'], config['ep_update']['fullPath'])
-        return ResponseModel(message='download complete', content=result)
-    else :
+    if 'ep_update' not in config:
         raise HTTPException(400, 'ep_update not found in config')
+
+    response = fileService.getEpDownloadCheck(config)
+    if response['flag'] == False :
+        return ResponseModel(message=response['message'], content=response['content'])
+
+    try : 
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'ep_update.status':properties.STATUS_DOWNLOADING}})
+        result = await fileService.getEp(config['ep_update']['url'], config['ep_update']['fullPath'])
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'ep_update.status':''}})
+        return ResponseModel(message='download complete', content=result)
+
+    except Exception as e : 
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'ep_update.status':''}})
+        raise HTTPException(400, str(e))
+        
+
+
     
 
 
@@ -138,26 +165,46 @@ async def getDownloadUpdate(catalog_id):
 # ep 변환(만) 단위테스트
 @router.get('/ep/convert2feed/{catalog_id}')
 async def getEpConvert2feed(catalog_id):
-    config = configRepository.findOne(catalog_id)
-
-    configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'converting'}})
-    ConvertProcess(config).execute(catalog_id=catalog_id)
-    configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
+    config = ConfigRepository().findOne(catalog_id)
     
-    return ResponseModel(message='convert complete')
+    # exception
+    if config['info']['status'] == properties.STATUS_CONVERTING : # status값을 상수로 만들어야겠다..        
+        raise HTTPException(status_code=400, detail=f'convert already started at {config["info"]["moddate"]}...')
+    
+    try:
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING, 'info.moddate':Utils.nowtime()}})
+        ConvertProcess(config).execute(catalog_id=catalog_id)
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'', 'info.moddate':Utils.nowtime()}})
+        return ResponseModel(message='convert complete')
+
+    except Exception as e :
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'', 'info.moddate':Utils.nowtime()}})
+        raise HTTPException(status_code=400, detail=str(e))
+        
 
 # ep_update 변환 단위테스트
 @router.get('/ep/convert2feed/{catalog_id}/update')
 async def getEpConvert2feed(catalog_id):
     config = configRepository.findOne(catalog_id)
 
-    if 'ep_update' in config :
-        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'converting'}})
+    # exception
+    if 'ep_update' not in config :
+        raise HTTPException(400, 'ep_update not found in config')
+
+    if config['info']['status'] == properties.STATUS_CONVERTING : # status값을 상수로 만들어야겠다..
+        raise HTTPException(400, 'convert already started at {config["info"]["moddate"]}...')
+    
+    try :
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
         ConvertProcess(config).execute(catalog_id=catalog_id, isUpdate=True)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
         return ResponseModel(message='convert complete')
-    else:
-        raise HTTPException(400, 'ep_update not found in config')
+
+    except Exception as e :
+        configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
+        raise HTTPException(status_code=400, detail=str(e))
+    
+        
         
 
 
@@ -245,3 +292,10 @@ async def test_sync():
     print('end await')
     return ResponseModel(message='test end')
 
+
+@router.get('/test/filetimecheck')
+async def test_filetimecheck():
+    serverfile = fileService.getInfo('http://api.dmcf1.com/ep/ssg/ssg_facebookNoCkwhereEpAll.csv')
+    localfile = fileService.getInfo('C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv')
+    result = {'server': serverfile, 'local':localfile}
+    return ResponseModel(content=result)

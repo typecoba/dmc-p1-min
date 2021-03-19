@@ -7,7 +7,6 @@ from common.FileService import FileService
 from common.Logger import Logger
 from common.FacebookAPI import FacebookAPI
 import requests
-from starlette.config import Config
 
 '''
 execute 단위로 비동기 코루틴 생성
@@ -35,8 +34,7 @@ class ConvertProcess():
 
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
     # ep_update인 경우 convert 후 upload시 isUpdate 플래그 활성
-    def execute(self, catalog_id=None, isUpdate=False):
-        
+    def execute(self, catalog_id=None, isUpdate=False):    
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
@@ -89,7 +87,7 @@ class ConvertProcess():
             # memory clean
             del[[chunkDF]]
             gc.collect()
-            # break        
+            # break
         
 
         # 압축 / 백업 / 업로드

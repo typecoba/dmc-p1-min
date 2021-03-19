@@ -37,4 +37,4 @@ app.middleware('http')(ResponseMiddleware())
 
 # run server
 if __name__ == '__main__':
-    uvicorn.run('main:app', host='127.0.0.1', port=8000, reload=True, workers=4) # reload=True 시 single process로 돌아감
+    uvicorn.run('main:app', host='127.0.0.1', port=8000, workers=6, reload=True) # reload=True 시 single process로 돌아감

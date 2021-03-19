@@ -20,11 +20,16 @@ class Properties() :
 
     # access token
     __facebookAccessToken=''
+
+    # 상수
+    STATUS_DOWNLOADING = 'DOWNLOADING'
+    STATUS_CONVERTING = 'CONVERTING'
+
     
+
     '''
     더 스마트한 방법이 없을까?
     '''
-
     def __init__(self):
         prop = Config('property.env')
         self.__facebookAccessToken = prop('facebook_api_access_token')
@@ -98,4 +103,11 @@ class Properties() :
     
     def getFacebookAccessToken(self):
         return self.__feedAccessToken
+
+    @staticmethod
+    def _DOWNLOADING():
+        return 'DOWNLOADING'
     
+    @staticmethod
+    def _CONVERTING():
+        return 'CONVERTING'

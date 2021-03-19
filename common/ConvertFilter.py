@@ -7,7 +7,8 @@ class ConvertFilter():
         self.config = config        
         self.catalog_id = catalog_id
         self.result = pd.DataFrame()
-        self.logger = Logger() # 기본로거
+        # self.logger = Logger() # 기본로거
+        self.logger = None
 
     def setLogger(self, logger=None):
         self.logger = logger        
@@ -15,7 +16,7 @@ class ConvertFilter():
 
     # 실행함수
     def run(self, dataframe):        
-        self.logger.info('Convert Filter : ' + str(self.config['filter']))
+        # self.logger.info('Convert Filter : ' + str(self.config['filter']))
         self.result = dataframe # chunk data
         self.result = self.commonFilter(self.result) # 공통 filter                
         self.result = self.mediaFilter(self.result) # 매체별 공통 filter        
