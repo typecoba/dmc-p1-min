@@ -98,10 +98,10 @@ class ConvertProcess():
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
             self.fileService.zipped(feedPath, feedPath+".zip") # 압축
             self.fileService.delete(feedPath) # tsv 제거                        
-            # self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdateOnly=isUpdate) # api 업로드
+            self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdateOnly=isUpdate) # api 업로드
 
     
-        self.logger.info('==Feed Convert Process End==')        
+        self.logger.info('==Feed Convert Process End==')
             
 
     # pixel데이터 다운로드 (to ep)

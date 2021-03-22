@@ -246,32 +246,31 @@ async def getSchedule():
     configs = configRepository.findAll()
     
     for config in configs: # config 전체        
-        # ep / ep_update
-        isUpdate = True if 'ep_update' in config else False         
-        
-        if pycron.is_now(config['ep']['cron']) or (isUpdate==True and pycron.is_now(config['ep_update']['cron'])): # cron check
+        # ep cron
+        if pycron.is_now(config['ep']['cron']) : # cron check
             convertProcess = ConvertProcess(config)
-
             # 비동기
             for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
                 print(catalogDict['name'], catalog_id)
-                # await convertProcess.execute(catalog_id=catalog_id, isUpdate=isUpdate) # catalog_id 기준으로 실행
+                await convertProcess.execute(catalog_id=catalog_id, isUpdate=False) # catalog_id 기준으로 실행
+
+
+        # ep_update cron
+        if ('ep_update' in config) and pycron.is_now(config['ep']['cron']) :
+            convertProcess = ConvertProcess(config)            
+            for catalog_id, catalogDict in config['catalog'].items() :
+                print(catalogDict['name'], catalog_id)
+                await convertProcess.execute(catalog_id=catalog_id, isUpdate=True)
+        
                 
     return ResponseModel(content='scheduled')
 
 
 
-@router.get('/test/async')
-async def test_sync():
-    print('test async')
-    await asyncio.sleep(3)
-    print('end await')
-    return ResponseModel(message='test end')
-
-
-@router.get('/test/filetimecheck')
-async def test_filetimecheck():
-    serverfile = fileService.getInfo('http://api.dmcf1.com/ep/ssg/ssg_facebookNoCkwhereEpAll.csv')
-    localfile = fileService.getInfo('C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv')
-    result = {'server': serverfile, 'local':localfile}
-    return ResponseModel(content=result)
+@router.get('/test/apiupload')
+async def test_apiupload():
+    feed_id = '236164118048821'
+    feed_url = 'http://api.dmcf1.com/feed/141118536454632/watermark_141118536454632.json.gz'
+    isUpdate = False
+    await facebookAPI.upload(feed_id, None, isUpdate)
+    return ResponseModel()

@@ -35,7 +35,7 @@ class FileService():
                 f.close()
 
             # str-> datetime -> timezone 적용 -> formatting
-            mdatetime = parser.parse(response['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %Z')
+            mdatetime = parser.parse(response['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S')
 
             result = {
                 'url': filePath,
@@ -74,7 +74,10 @@ class FileService():
     [epdownload check & download]
     1. 원본 ep 와 local ep 시간비교
     2. config status 이용하여 download lock
-    3. ep update 플래그로 config 연동        
+    3. ep update 플래그로 config 연동
+    
+    *** convert process 내부에서 연동되므로 exception을 함수 외부로 빼야하나?
+
     '''    
     async def getEpDownload(self, catalog_id=None, epType=''): # type = '' or 'update'
         configRepository = ConfigRepository()        
