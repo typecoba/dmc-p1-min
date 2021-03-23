@@ -37,6 +37,7 @@ class Properties() :
         # ip check
         ip = socket.gethostbyname(socket.getfqdn())
         rootPath = ''
+        prefix = ''
         if ip == '192.168.0.181' : # prod
             prefix = 'prod'                        
 
@@ -44,7 +45,7 @@ class Properties() :
             prefix = 'dev'
 
         else : # local
-            previx = 'local'
+            prefix = 'local'
             rootPath = os.getcwd().replace('\\','/') + "/" # 프로젝트 root
         
         self.__host = prop(f'{prefix}_db_host')
