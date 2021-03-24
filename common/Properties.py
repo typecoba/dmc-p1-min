@@ -24,6 +24,7 @@ class Properties() :
     # 상수
     STATUS_DOWNLOADING = 'DOWNLOADING'
     STATUS_CONVERTING = 'CONVERTING'
+    SERVER_AUTO_RELOAD = False # 개발환경 자동리로드
 
     
 
@@ -39,14 +40,17 @@ class Properties() :
         rootPath = ''
         prefix = ''
         if ip == '192.168.0.181' : # prod
-            prefix = 'prod'                        
+            prefix = 'prod'
+            self.SERVER_AUTO_RELOAD = False
 
         elif ip == '10.94.1.215' : # dev
             prefix = 'dev'
+            self.SERVER_AUTO_RELOAD = False
 
         else : # local
             prefix = 'local'
-            rootPath = os.getcwd().replace('\\','/') + "/" # 프로젝트 root
+            self.SERVER_AUTO_RELOAD = True
+            rootPath = os.getcwd().replace('\\','/') # 프로젝트 root 절대경로
         
         self.__host = prop(f'{prefix}_db_host')
         self.__port = prop(f'{prefix}_db_port')

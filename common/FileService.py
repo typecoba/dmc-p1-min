@@ -79,15 +79,15 @@ class FileService():
     *** convert process 내부에서 연동되므로 exception을 함수 외부로 빼야하나?
 
     '''    
-    async def getEpDownload(self, catalog_id=None, epType=''): # type = '' or 'update'
+    async def getEpDownload(self, catalog_id=None, isUpdate=False): # type = '' or 'update'
         configRepository = ConfigRepository()        
         config = configRepository.findOne(catalog_id)
 
         # ep / ep_update flag
-        epKey = 'ep_update' if epType=='update' else 'ep'
+        epKey = 'ep_update' if isUpdate == True else 'ep'
 
         # ep_update 체크
-        if epType == 'update' and 'ep_update' not in config:            
+        if isUpdate == True and 'ep_update' not in config:
             raise HTTPException(400, 'ep_update not found in config')
 
         # 원본파일 변동 확인
@@ -129,6 +129,7 @@ class FileService():
 
         except Exception as e :
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':''}})
+            print(e)
             raise HTTPException(status_code=400, detail=str(e))
                 
         

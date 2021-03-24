@@ -45,8 +45,13 @@ class ConvertProcess():
         # 2. convert
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
-        feedPathKey = 'fullPath_update' if isUpdate else 'fullPath'
-        epKey = 'ep_update' if isUpdate else 'ep'
+        if isUpdate : 
+            feedPathKey = 'fullPath_update'
+            epPathKey = 'ep_update'
+        else:
+            feedPathKey = 'fullPath'
+            epPathKey = 'ep'
+
         
         print(feedIdList)
         # print(segmentIndexMap)
@@ -54,23 +59,16 @@ class ConvertProcess():
         
         epLoad = self.chunkLoad(
             chunkSize=500000,
-            filePath=self.config[epKey]['fullPath'],
-            seperator=self.config[epKey]['sep'],
-            encoding=self.config[epKey]['encoding']
+            filePath=self.config[epPathKey]['fullPath'],
+            seperator=self.config[epPathKey]['sep'],
+            encoding=self.config[epPathKey]['encoding']
         )                            
 
         ## convert 진행
         totalCount=0
         for num, chunkDF in enumerate(epLoad): # chunk load
             # filter
-            chunkDF = self.convertFilter.run(chunkDF)
-
-            # 중복제거 *chunk내부만 검사.. test
-            chunkDF = chunkDF.drop_duplicates(['id'], ignore_index=True)
-        
-            # write *전체포함 파일 생성 (머천센터등 필요)
-            feedPath = self.config['catalog'][catalog_id]['feed_all'][feedPathKey]
-            self.feedWrite(num, feedPath=feedPath, df=chunkDF)
+            chunkDF = self.convertFilter.run(chunkDF)                
 
             # makeSegment *복수피드인경우 세그먼트 분리됨
             for i, feed_id in enumerate(feedIdList):
@@ -78,8 +76,7 @@ class ConvertProcess():
                 # write                
                 feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
                 self.feedWrite(num, feedPath=feedPath, df=segmentDF)
-                                        
-
+            
             # log
             totalCount = totalCount + chunkDF.shape[0]
             self.logger.info(f'..{format(totalCount,",")} row processed')
@@ -89,17 +86,36 @@ class ConvertProcess():
             gc.collect()
             # break
         
+        
 
-        # 압축 / 백업 / 업로드
-        feedPath = self.config['catalog'][catalog_id]['feed_all'][feedPathKey]
-        self.fileService.zipped(feedPath, feedPath+".zip") # 압축
-        self.fileService.delete(feedPath) # tsv 제거
-        for i, feed_id in enumerate(feedIdList):                        
+        # 중복제거 / 압축 / 백업 / 업로드        
+        feedAllPath = self.config['catalog'][catalog_id]['feed_all'][feedPathKey]
+
+        for i, feed_id in enumerate(feedIdList):            
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
-            self.fileService.zipped(feedPath, feedPath+".zip") # 압축
-            self.fileService.delete(feedPath) # tsv 제거                        
-            self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdateOnly=isUpdate) # api 업로드
 
+
+            # feed별 중복제거
+            feedDF = pd.read_csv(feedPath,sep='\t',encoding='utf-8') 
+            feedDF = feedDF.drop_duplicates(['id'], ignore_index=True)
+            
+            # feed_all 쓰기 (머천센터등 필요)
+            self.feedWrite(i, feedPath=feedAllPath, df=feedDF)
+            # feed 쓰기
+            self.feedWrite(feedPath=feedPath, df=feedDF)            
+
+            # memory clean
+            del[[feedDF]]
+            gc.collect()
+
+            # 압축 / tsv 제거 / 업로드
+            self.fileService.zipped(feedPath, feedPath+".zip")            
+            self.fileService.delete(feedPath)
+            # self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdate=isUpdate) # api 업로드
+
+        # all파일 압축 / 제거
+        self.fileService.zipped(feedAllPath, feedAllPath+".zip")
+        self.fileService.delete(feedAllPath)
     
         self.logger.info('==Feed Convert Process End==')
             

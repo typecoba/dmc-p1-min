@@ -121,13 +121,13 @@ async def getEpExport(catalog_id):
 # 
 @router.get('/ep/download/{catalog_id}')
 async def getDownload(catalog_id):    
-    return  await fileService.getEpDownload(catalog_id)
+    return  await fileService.getEpDownload(catalog_id=catalog_id)
 
 
 # ep_update 경로 추가
 @router.get('/ep/download/{catalog_id}/update')
 async def getDownloadUpdate(catalog_id):    
-    return await fileService.getEpDownload(catalog_id, 'update')
+    return await fileService.getEpDownload(catalog_id=catalog_id, isUpdate=True)
 
     
 
@@ -274,3 +274,10 @@ async def test_apiupload():
     isUpdate = False
     await facebookAPI.upload(feed_id, None, isUpdate)
     return ResponseModel()
+
+@router.get('/test/download')
+async def test_download():
+    fromPath = 'http://api.dmcf1.com/ep/ssg/ssg_facebookNoCkwhereEpAll.csv'
+    toPath = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv'
+    print(toPath)
+    await fileService.download(fromPath, toPath)

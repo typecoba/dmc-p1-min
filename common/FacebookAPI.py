@@ -22,7 +22,7 @@ class FacebookAPI():
     '''
     async def upload(self, feed_id, feed_url, isUpdate):        
         api_url = f'https://graph.facebook.com/v9.0/{feed_id}/uploads'        
-        update_only= 'true' if isUpdate else 'false'                            
+        update_only= 'true' if isUpdate==True else 'false'                            
         params ={'update_only': update_only ,'access_token': self.access_token, 'url': feed_url}
 
         self.logger.info('Upload '+str({'api_url':api_url, 'params':params}))                    
@@ -30,7 +30,7 @@ class FacebookAPI():
             async with session.post(api_url, data=params) as response:
                 result = await response.text()
                 self.logger.info('Result '+result)
-                return result
+                return result  
         
     def upsert(self):
         pass
