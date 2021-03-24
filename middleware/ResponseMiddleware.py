@@ -14,6 +14,11 @@ class ResponseMiddleware():
         logger = Logger() # root logger
         logger.info(f'**Request {request.url.path}')
 
+        # docs페이지 예외(...)
+        if request.url.path == '/docs' or request.url.path == '/openapi.json' :
+            return await call_next(request)
+        
+
         # start
         starttime = time.time()
         # json string byte로 받아 dict로 변환
