@@ -1,5 +1,5 @@
 from starlette.config import Config
-import socket
+from common.Utils import Utils
 import os
 class Properties() :
     # database
@@ -36,7 +36,7 @@ class Properties() :
         self.__facebookAccessToken = prop('facebook_api_access_token')
 
         # ip check
-        ip = socket.gethostbyname(socket.getfqdn())
+        ip = Utils.getIP()
         rootPath = ''
         prefix = ''
         if ip == '192.168.0.181' : # prod
