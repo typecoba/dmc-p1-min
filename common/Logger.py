@@ -1,5 +1,6 @@
 import logging, logging.handlers, logging.config
 import os, datetime
+from common.Properties import Properties
 # from log4mongo.handlers import MongoHandler
 
 '''
@@ -11,11 +12,12 @@ class Logger():
     # logger = None
     # streamHandler = None
     # fileHandler = None
-    
-    def __init__(self, name=None, filePath=None):
-        rootPath = os.getcwd().replace('\\', '/')
-        date = datetime.datetime.now().strftime('%Y%m%d')
 
+    
+    
+    def __init__(self, name=None, filePath=None):        
+        date = datetime.datetime.now().strftime('%Y%m%d')
+        properties = Properties()
         config = {
             'version': 1,
             'disable_existing_loggers': False,
@@ -31,7 +33,7 @@ class Logger():
                 },
                 'file_root': {
                     'class':'logging.FileHandler',
-                    'filename':f'{rootPath}/data/logs/server_log.{date}.log',
+                    'filename':f'{properties.getLogPath()}/server_log.{date}.log', # root log path
                     'formatter':'default',
                     'level':'NOTSET',
                 },

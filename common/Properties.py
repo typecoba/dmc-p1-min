@@ -61,8 +61,8 @@ class Properties() :
         self.__epBackupPath =   rootPath + prop(f'{prefix}_ep_backup_path')
         self.__feedPath =       rootPath + prop(f'{prefix}_feed_path')
         self.__feedBackupPath = rootPath + prop(f'{prefix}_feed_backup_path')
-        self.__logPath =        rootPath + prop(f'{prefix}_log_path')
-        self.__convertLogPath = rootPath + prop(f'{prefix}_convert_log_path')
+        self.__logPath =        os.getcwd().replace('\\','/') + prop(f'{prefix}_log_path') # 프로젝트 root
+        self.__convertLogPath = os.getcwd().replace('\\','/') + prop(f'{prefix}_convert_log_path') # 프로젝트 root
 
     
     def getHost(self):

@@ -1,5 +1,5 @@
 from datetime import datetime
-import socket
+import socket, os
 
 
 class Utils():
@@ -27,3 +27,10 @@ class Utils():
         s.connect(('8.8.8.8', 0)) 
         ip = s.getsockname()[0] 
         return ip
+
+    @staticmethod
+    def makeDirWithMode(dirPath='', mode=''):
+        if not os.path.isdir(dirPath):
+            oldmask = os.umask(0)
+            os.makedirs(dirPath, 0o775)
+            os.umask(oldmask)
