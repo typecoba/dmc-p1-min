@@ -12,12 +12,14 @@ class Logger():
     # logger = None
     # streamHandler = None
     # fileHandler = None
-
     
-    
-    def __init__(self, name=None, filePath=None):        
+    def __init__(self, name=None, filePath=None):
         date = datetime.datetime.now().strftime('%Y%m%d')
-        properties = Properties()
+        prop = Properties()
+
+        # make dir
+        os.makedirs(os.path.dirname(prop.getLogPath()), exist_ok=True) # 경로확인/생성
+
         config = {
             'version': 1,
             'disable_existing_loggers': False,
@@ -33,7 +35,7 @@ class Logger():
                 },
                 'file_root': {
                     'class':'logging.FileHandler',
-                    'filename':f'{properties.getLogPath()}/server_log.{date}.log', # root log path
+                    'filename':f'{prop.getLogPath()}/server_log.{date}.log', # root log path
                     'formatter':'default',
                     'level':'NOTSET',
                 },
@@ -43,6 +45,8 @@ class Logger():
 
         # file_convert handler 동적생성
         if name!=None and filePath != None :
+            os.makedirs(os.path.dirname(filePath), exist_ok=True) # 경로확인/생성
+            
             config['handlers']['file_convert'] = {
                 'class':'logging.FileHandler',
                 'filename':filePath,
