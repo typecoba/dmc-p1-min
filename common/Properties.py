@@ -75,7 +75,7 @@ class Properties() :
         return self.__server_host
 
     def getServerPort(self):
-        return self.__server_port
+        return int(self.__server_port) # port는 int로 받음
 
     def getDBHost(self):
         return self.__db_host
