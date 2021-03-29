@@ -2,12 +2,15 @@ from starlette.config import Config
 from common.Utils import Utils
 import os
 class Properties() :
-    # database
-    __ip=''
-    __host=''
-    __port=''
-    __database=''
-    __collection=''
+    #server
+    __server_host=''
+    __server_port=''
+
+    # mongodb
+    __db_host=''
+    __db_port=''
+    __db_database=''
+    __db_collection=''
 
     # path
     __root=''
@@ -52,10 +55,13 @@ class Properties() :
             self.SERVER_AUTO_RELOAD = True
             rootPath = os.getcwd().replace('\\','/') # 프로젝트 root 절대경로
         
-        self.__host = prop(f'{prefix}_db_host')
-        self.__port = prop(f'{prefix}_db_port')
-        self.__database = prop(f'{prefix}_db_database_name')
-        self.__collection = prop(f'{prefix}_db_collection_name')
+        self.__server_host = prop(f'{prefix}_server_host')
+        self.__server_port = prop(f'{prefix}_server_port')
+        #
+        self.__db_host = prop(f'{prefix}_db_host')
+        self.__db_port = prop(f'{prefix}_db_port')
+        self.__db_database = prop(f'{prefix}_db_database_name')
+        self.__db_collection = prop(f'{prefix}_db_collection_name')
         #
         self.__epPath =         rootPath + prop(f'{prefix}_ep_path')
         self.__epBackupPath =   rootPath + prop(f'{prefix}_ep_backup_path')
@@ -65,17 +71,23 @@ class Properties() :
         self.__convertLogPath = os.getcwd().replace('\\','/') + prop(f'{prefix}_convert_log_path') # 프로젝트 root
 
     
-    def getHost(self):
-        return self.__host
+    def getServerHost(self):
+        return self.__server_host
+
+    def getServerPort(self):
+        return self.__server_port
+
+    def getDBHost(self):
+        return self.__db_host
         
-    def getPort(self):
-        return self.__port
+    def getDBPort(self):
+        return self.__db_port
     
-    def getDatabase(self):
-        return self.__database
+    def getDBDatabase(self):
+        return self.__db_database
     
-    def getCollection(self):
-        return self.__collection
+    def getDBCollection(self):
+        return self.__db_collection
     
     def getEpPath(self):
         return self.__epPath

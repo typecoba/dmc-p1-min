@@ -38,9 +38,10 @@ async def exception_handler(request, exc):
 app.middleware('http')(ResponseMiddleware())
 
 # run server
-if __name__ == '__main__':
-    # local환경 reload=True
-    # reload=True 시 single process로 설정됨    
-    prop = Properties()
-    print(prop.SERVER_AUTO_RELOAD)
-    uvicorn.run('main:app', host='127.0.0.1', port=8000, workers=6, reload=prop.SERVER_AUTO_RELOAD)
+if __name__ == '__main__':        
+    prop = Properties()    
+    uvicorn.run('main:app', 
+                host=prop.getServerHost(), 
+                port=prop.getServerPort(), 
+                workers=6, 
+                reload=prop.SERVER_AUTO_RELOAD) # True if local else False
