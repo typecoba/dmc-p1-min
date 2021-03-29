@@ -13,8 +13,8 @@ class ConfigRepository():
     # pixel crawl data
     def __init__(self):
         self.prop = Properties()
-        self.mongo = self.getClient(self.prop.getHost(), int(self.prop.getPort()))
-        self.configMongo = self.mongo[self.prop.getDatabase()][self.prop.getCollection()]
+        self.mongo = self.getClient(self.prop.getDBHost(), int(self.prop.getDBPort()))
+        self.configMongo = self.mongo[self.prop.getDBDatabase()][self.prop.getDBCollection()]
         
         
 
@@ -69,33 +69,28 @@ class ConfigRepository():
         epFileName = f'ep_{epName}.{epFormat}'
         epFullPath = f'{self.prop.getEpPath()}/{epFileName}'
         config['ep']['fullPath'] = epFullPath
+        if 'ep_update' in config : # ep_update 있는경우
+            config['ep_update']['fullPath'] = f'{self.prop.getEpPath()}/ep_{epName}_update.{epFormat}'
 
-        # catalog > feed
+        # catalog -> feed
         for catalog_id, catalogDict in config['catalog'].items():
             feedPath = f'{self.prop.getFeedPath()}/{catalog_id}' # catalog_id 폴더
             feedAllFileName = f'feed_{catalog_id}_all.tsv'
             feedAllUpdateFileName = f'feed_{catalog_id}_update_all.tsv'
             
-            # 피드가 한개인경우엔 의미없음
-            catalogDict['feed_all'] = {'fullPath': f'{feedPath}/{feedAllFileName}', 
-                                       'fullPath_update': f'{feedPath}/{feedAllUpdateFileName}'}
+            # 피드가 한개인경우엔 동일함..
+            catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
+            if 'ep_update' in config: # ep_update 있는경우
+                catalogDict['feed_all']['fullPath_update'] = f'{feedPath}/{feedAllUpdateFileName}'
+
             # feed
             for feed_id, feed in catalogDict['feed'].items():
                 feedFileName = f'feed_{catalog_id}_{feed_id}.tsv'
-                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath':f'{feedPath}/{feedFileName}'} # 서버 www접근폴더로 설정해야함
-                
-
-        # update (update only)
-        if 'ep_update' in config :
-            # ep_update
-            config['ep_update']['fullPath'] = f'{self.prop.getEpPath()}/ep_{epName}_update.{epFormat}'
-            
-            for catalog_id, catalogDict in config['catalog'].items():
-                for feed_id, feed in catalogDict['feed'].items():                    
-                    # feed_update
-                    updateFeedPath = f'{self.prop.getFeedPath()}/{catalog_id}'
-                    updateFeedFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'              
-                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{updateFeedPath}/{updateFeedFileName}'
+                feedUpdateFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'
+                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath' : f'{feedPath}/{feedFileName}'}
+                if 'ep_update' in config: # ep_update 있는경우
+                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedFileName}/{feedUpdateFileName}'                        
+                    
 
         # convert log
         logFileName = f'log_convert_{epName}.{dateMonth}.log' # 월별
