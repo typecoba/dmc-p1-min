@@ -34,15 +34,15 @@ class ConvertProcess():
 
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
     # ep_update인 경우 convert 후 upload시 isUpdate 플래그 활성
-    def execute(self, catalog_id=None, isUpdate=False):    
+    def execute(self, catalog_id=None, isUpdate=False, isUpload=False):    
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
         
-        # 1. download
+        # [1. download]
         # await self.fileService.download(self.config['ep']['url'], self.config['ep']['fullPath'])
 
-        # 2. convert
+        # [2. convert]
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
         if isUpdate : 
@@ -111,7 +111,9 @@ class ConvertProcess():
             # 압축 / tsv 제거 / 업로드
             self.fileService.zipped(feedPath, feedPath+".zip")            
             self.fileService.delete(feedPath)
-            # self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdate=isUpdate) # api 업로드
+            # [3. upload]
+            if isUpload :
+                self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")
@@ -136,9 +138,8 @@ class ConvertProcess():
                                 nrows=1, #한줄만 읽음
                                 sep=seperator, # 명시
                                 # lineterminator='\r',
-                                encoding=encoding)
-        columns = list(columns) 
-        # print(columns)
+                                encoding=encoding)        
+        columns = list(columns)
 
         result = pd.read_csv(filePath,
                             nrows=None,

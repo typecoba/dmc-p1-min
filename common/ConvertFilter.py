@@ -25,9 +25,10 @@ class ConvertFilter():
 
         
     def commonFilter(self, dataframe=None):
+
         # columns {'a':'b'}  'a'->'b'
         keys = list(self.config['columns'].keys())
-        dataframe = dataframe[keys] # 필요컬럼만 추출                
+        dataframe = dataframe[keys] # 필요컬럼만 추출        
         dataframe.rename(columns= self.config['columns'], inplace=False) # key 수정
 
         # 공백제거, result.apply(lambda x: x.str.strip(), axis=1) 로 돌리면 너무느림

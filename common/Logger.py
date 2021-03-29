@@ -15,7 +15,7 @@ class Logger():
     
     def __init__(self, name=None, filePath=None):
         date = datetime.datetime.now().strftime('%Y%m%d')
-        prop = Properties()
+        prop = Properties()        
 
         # make dir
         os.makedirs(os.path.dirname(prop.getLogPath()), exist_ok=True) # 경로확인/생성
