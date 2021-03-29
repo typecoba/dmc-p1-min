@@ -109,7 +109,7 @@ async def getEpInfo(catalog_id):
 async def getEpExport(catalog_id):
     config = configRepository.findOne(catalog_id)
     # exception
-    if os.path.isfile(config['ep']['fullPath']) == False:        
+    if os.path.isfile(config['ep']['fullPath']) == False:
         raise HTTPException(400, 'feed file not found')
     # file export
     response = FileResponse(config['ep']['fullPath'],
@@ -120,7 +120,7 @@ async def getEpExport(catalog_id):
 
 # 
 @router.get('/ep/download/{catalog_id}')
-async def getDownload(catalog_id):    
+async def getDownload(catalog_id):
     return  await fileService.getEpDownload(catalog_id=catalog_id)
 
 
@@ -144,7 +144,7 @@ async def getEpConvert2feed(catalog_id):
     config = ConfigRepository().findOne(catalog_id)
     
     # exception
-    if config['info']['status'] == properties.STATUS_CONVERTING : # status값을 상수로 만들어야겠다..        
+    if config['info']['status'] == properties.STATUS_CONVERTING :
         raise HTTPException(status_code=400, detail=f'convert already started at {config["info"]["moddate"]}...')
     
     try:
@@ -228,15 +228,30 @@ async def getFeedSegmentation(catalog_id):
     return ResponseModel()
 
 
+# facebook api update / update
 @router.get('/feed/upload/{catalog_id}')
-async def getFeedUpload(catalog_id,feed_id):
+async def getFeedUpload(catalog_id):
     config = configRepository.findOne(catalog_id)
     # feed별 업로드
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
-        await facebookAPI.upload(feed_id, feed['fullPath']+'.zip')
+        if config['info']['media'] == 'facebook':
+            await facebookAPI.upload(feed_id, feed['fullPath']+'.zip')
 
     return ResponseModel(message='Facebook API upload complete')
+
+@router.get('/feed/upload/{catalog_id}/update')
+async def getFeedUploadUpdate(catalog_id):
+    config = configRepository.findOne(catalog_id)
+    if 'ep_update' not in config:
+        raise HTTPException(400, 'ep_update not in config')
+
+    # feed별 업데이트
+    for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
+        if config['info']['media'] == 'facebook':
+            await facebookAPI.upload(feed_id, feed['fullPath'])
     
+    return ResponseModel(message='Facebook API upload (update only) complete')
+
 
 
 # scheduled feed convert process
@@ -247,12 +262,12 @@ async def getSchedule():
     
     for config in configs: # config 전체        
         # ep cron
-        if pycron.is_now(config['ep']['cron']) : # cron check
+        if pycron.is_now(config['ep']['cron']) : # cron check            
             convertProcess = ConvertProcess(config)
             # 비동기
             for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
                 print(catalogDict['name'], catalog_id)
-                await convertProcess.execute(catalog_id=catalog_id, isUpdate=False) # catalog_id 기준으로 실행
+                await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=True) # catalog_id 기준으로 실행
 
 
         # ep_update cron
@@ -260,9 +275,8 @@ async def getSchedule():
             convertProcess = ConvertProcess(config)            
             for catalog_id, catalogDict in config['catalog'].items() :
                 print(catalogDict['name'], catalog_id)
-                await convertProcess.execute(catalog_id=catalog_id, isUpdate=True)
-        
-                
+                await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=True)
+                        
     return ResponseModel(content='scheduled')
 
 
