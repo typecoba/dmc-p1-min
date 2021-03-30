@@ -235,7 +235,7 @@ async def getFeedUpload(catalog_id):
     # feed별 업로드
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
         if config['info']['media'] == 'facebook':
-            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['fullPath']+'.zip', isUpload=False)
+            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['fullPath']+'.zip', isUpdate=False)
 
     return ResponseModel(message='Facebook API upload complete')
 
@@ -248,7 +248,7 @@ async def getFeedUploadUpdate(catalog_id):
     # feed별 업데이트
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
         if config['info']['media'] == 'facebook':
-            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['fullPath'], isUpload=True)
+            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['fullPath'], isUpdate=True)
     
     return ResponseModel(message='Facebook API upload (update only) complete')
 
