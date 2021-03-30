@@ -35,13 +35,13 @@ class FileService():
                 f.close()
 
             # str-> datetime -> timezone 적용 -> formatting
-            mdatetime = parser.parse(response['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S')
+            mdatetime = parser.parse(response['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %z')
 
             result = {
                 'url': filePath,
-                'size': Utils.sizeof_fmt(int(response['Content-Length'])),                
+                'size': Utils.sizeof_fmt(int(response['Content-Length'])),
                 'last_moddate': mdatetime
-            }            
+            }
 
         else : # 파일인경우
             # file check
@@ -54,7 +54,7 @@ class FileService():
             # atime = os.path.getatime(filePath)  # 마지막 엑세스시간
             
             # timestamp -> datetime -> timezone 적용 -> formatting
-            mdatetime = datetime.fromtimestamp(mtime, timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %Z')
+            mdatetime = datetime.fromtimestamp(mtime, timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %z')
             result = {
                 'path': filePath,
                 'size': Utils.sizeof_fmt(size),
