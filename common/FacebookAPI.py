@@ -6,8 +6,7 @@ from common.Properties import Properties
 
 class FacebookAPI():
     # config
-    prop = Properties()
-    access_token = prop.getFacebookAccessToken()
+    prop = Properties()    
 
     def __init__(self):        
         self.logger = Logger() # 기본로거
@@ -20,10 +19,10 @@ class FacebookAPI():
     isUpdate='false' 전체 삭제 후 업로드(default)
     isUpdate='true' 업데이트만 
     '''
-    async def upload(self, feed_id, feed_url, isUpdate):        
-        api_url = f'https://graph.facebook.com/v9.0/{feed_id}/uploads'        
-        update_only= 'true' if isUpdate==True else 'false'                            
-        params ={'update_only': update_only ,'access_token': self.access_token, 'url': feed_url}
+    async def upload(self, feed_id='', feed_url='', isUpdate=False):        
+        api_url = f'https://graph.facebook.com/v9.0/{feed_id}/uploads'
+        update_only= 'true' if isUpdate==True else 'false'
+        params ={'update_only': update_only ,'access_token': self.prop.getFacebookAccessToken(), 'url': feed_url}
 
         self.logger.info('Upload '+str({'api_url':api_url, 'params':params}))                    
         async with aiohttp.ClientSession() as session:
