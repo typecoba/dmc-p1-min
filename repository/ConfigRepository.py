@@ -15,8 +15,7 @@ class ConfigRepository():
         self.prop = Properties()
         self.mongo = self.getClient(self.prop.getDBHost(), int(self.prop.getDBPort()))
         self.configMongo = self.mongo[self.prop.getDBDatabase()][self.prop.getDBCollection()]
-        
-        
+                
 
     # connect
     def getClient(self, host, port):
@@ -89,7 +88,7 @@ class ConfigRepository():
                 feedUpdateFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'
                 config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath' : f'{feedPath}/{feedFileName}'}
                 if 'ep_update' in config: # ep_update 있는경우
-                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedFileName}/{feedUpdateFileName}'                        
+                    config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedUpdateFileName}'
                     
 
         # convert log
