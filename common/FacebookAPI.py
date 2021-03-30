@@ -25,7 +25,7 @@ class FacebookAPI():
         params ={'update_only': update_only ,'access_token': self.prop.getFacebookAccessToken(), 'url': feed_url}
 
         self.logger.info('Upload '+str({'api_url':api_url, 'params':params}))                    
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(api_url, data=params) as response:
                 result = await response.text()
                 self.logger.info('Result '+result)
