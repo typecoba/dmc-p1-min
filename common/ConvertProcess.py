@@ -6,6 +6,7 @@ from common.ConvertFilter import ConvertFilter
 from common.FileService import FileService
 from common.Logger import Logger
 from common.FacebookAPI import FacebookAPI
+from common.Properties import Properties
 import requests
 
 '''
@@ -30,6 +31,7 @@ class ConvertProcess():
         self.fileService.setLogger(self.logger) # 파이프라인 공통로거 삽입
         self.facebookAPI = FacebookAPI() # facebook api
         self.facebookAPI.setLogger(self.logger)
+        self.properties = Properties()
 
 
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
@@ -112,8 +114,8 @@ class ConvertProcess():
             self.fileService.zipped(feedPath, feedPath+".zip")            
             self.fileService.delete(feedPath)
             # [3. upload]
-            if isUpload :
-                self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPath+".zip", isUpdate=isUpdate) # api 업로드
+            if isUpload :                
+                self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{properties.getServerDomain()}/{feedPath}.zip', isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")

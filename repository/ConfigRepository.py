@@ -74,6 +74,11 @@ class ConfigRepository():
         # catalog -> feed
         for catalog_id, catalogDict in config['catalog'].items():
             feedPath = f'{self.prop.getFeedPath()}/{catalog_id}' # catalog_id 폴더
+            if self.prop.SERVER_PREFIX == 'local':
+                publicFeedPath = f'{self.prop.getFeedPath()}/{catalog_id}'
+            else :
+                publicFeedPath = f'{self.prop.getServerDomain()}/feed/{catalog_id}'
+            
             feedAllFileName = f'feed_{catalog_id}_all.tsv'
             feedAllUpdateFileName = f'feed_{catalog_id}_update_all.tsv'
             
@@ -87,8 +92,11 @@ class ConfigRepository():
                 feedFileName = f'feed_{catalog_id}_{feed_id}.tsv'
                 feedUpdateFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'
                 config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath' : f'{feedPath}/{feedFileName}'}
+                config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}' # 외부접근 Path (domain/path)
+                
                 if 'ep_update' in config: # ep_update 있는경우
                     config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedUpdateFileName}'
+                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}' # 외부접근 Path (domain/path)
                     
 
         # convert log

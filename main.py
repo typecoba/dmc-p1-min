@@ -41,7 +41,7 @@ app.middleware('http')(ResponseMiddleware())
 if __name__ == '__main__':        
     prop = Properties()    
     uvicorn.run('main:app', 
-                host=prop.getServerHost(), 
+                host=prop.SERVER_API_HOST,
                 port=prop.getServerPort(), 
-                workers=6, 
+                workers=prop.SERVER_API_WORKERS, 
                 reload=prop.SERVER_AUTO_RELOAD) # True if local else False
