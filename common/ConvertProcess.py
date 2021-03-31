@@ -48,11 +48,10 @@ class ConvertProcess():
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
         if isUpdate : 
-            feedPathKey = 'fullPath_update'
-            epPathKey = 'ep_update'
+            update_suffix = '_update'
         else:
-            feedPathKey = 'fullPath'
-            epPathKey = 'ep'
+            update_suffix = ''
+            
 
         
         print(feedIdList)
@@ -61,9 +60,9 @@ class ConvertProcess():
         
         epLoad = self.chunkLoad(
             chunkSize=500000,
-            filePath=self.config[epPathKey]['fullPath'],
-            seperator=self.config[epPathKey]['sep'],
-            encoding=self.config[epPathKey]['encoding']
+            filePath=self.config[f'ep{update_suffix}']['fullPath'],
+            seperator=self.config[f'ep{update_suffix}']['sep'],
+            encoding=self.config[f'ep{update_suffix}']['encoding']
         )                            
 
         ## convert 진행
@@ -76,7 +75,7 @@ class ConvertProcess():
             for i, feed_id in enumerate(feedIdList):
                 segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[i])] # id끝자리 i
                 # write                
-                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
+                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
                 self.feedWrite(num, feedPath=feedPath, df=segmentDF)
             
             # log
@@ -91,11 +90,11 @@ class ConvertProcess():
         
 
         # 중복제거 / 압축 / 백업 / 업로드        
-        feedAllPath = self.config['catalog'][catalog_id]['feed_all'][feedPathKey]
+        feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
 
         for i, feed_id in enumerate(feedIdList):            
-            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][feedPathKey]
-
+            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
+            feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
 
             # feed별 중복제거
             feedDF = pd.read_csv(feedPath,sep='\t',encoding='utf-8') 
@@ -104,7 +103,7 @@ class ConvertProcess():
             # feed_all 쓰기 (머천센터등 필요)
             self.feedWrite(i, feedPath=feedAllPath, df=feedDF)
             # feed 쓰기
-            self.feedWrite(feedPath=feedPath, df=feedDF)            
+            self.feedWrite(feedPath=feedPath, df=feedDF)
 
             # memory clean
             del[[feedDF]]
@@ -114,8 +113,8 @@ class ConvertProcess():
             self.fileService.zipped(feedPath, feedPath+".zip")            
             self.fileService.delete(feedPath)
             # [3. upload]
-            if isUpload :                
-                self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{properties.getServerDomain()}/{feedPath}.zip', isUpdate=isUpdate) # api 업로드
+            if isUpload :
+                self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")
