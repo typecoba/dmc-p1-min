@@ -8,6 +8,7 @@ from common.Logger import Logger
 from common.FacebookAPI import FacebookAPI
 from common.Properties import Properties
 import requests
+import csv
 
 '''
 execute 단위로 비동기 코루틴 생성
@@ -36,27 +37,26 @@ class ConvertProcess():
 
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
     # ep_update인 경우 convert 후 upload시 isUpdate 플래그 활성
-    def execute(self, catalog_id=None, isUpdate=False, isUpload=False):    
+    async def execute(self, catalog_id=None, isUpdate=False, isUpload=False):
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
         
         # [1. download]
-        # await self.fileService.download(self.config['ep']['url'], self.config['ep']['fullPath'])
+        responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdate=isUpdate)        
+        self.logger.info(f'[ 1.EP DOWNLOAD ] {responseModel.get()}')
 
         # [2. convert]
+        self.logger.info(f'[ 2.CONVERT ]')
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
         if isUpdate : 
             update_suffix = '_update'
         else:
             update_suffix = ''
-            
-
-        
-        print(feedIdList)
-        # print(segmentIndexMap)
-        
+                    
+        # print(feedIdList)
+        # print(segmentIndexMap)        
         
         epLoad = self.chunkLoad(
             chunkSize=500000,
@@ -69,18 +69,21 @@ class ConvertProcess():
         totalCount=0
         for num, chunkDF in enumerate(epLoad): # chunk load
             # filter
-            chunkDF = self.convertFilter.run(chunkDF)                
+            chunkDF = self.convertFilter.run(chunkDF)
 
-            # makeSegment *복수피드인경우 세그먼트 분리됨
+            # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
             for i, feed_id in enumerate(feedIdList):
                 segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[i])] # id끝자리 i
+                
                 # write                
                 feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
+
+                # print(segmentDF['id'][:5])
                 self.feedWrite(num, feedPath=feedPath, df=segmentDF)
             
             # log
             totalCount = totalCount + chunkDF.shape[0]
-            self.logger.info(f'..{format(totalCount,",")} row processed')
+            self.logger.info(f'..{format(totalCount,",")} row processed')            
 
             # memory clean
             del[[chunkDF]]
@@ -89,21 +92,21 @@ class ConvertProcess():
         
         
 
-        # 중복제거 / 압축 / 백업 / 업로드        
+        # 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드        
         feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
 
         for i, feed_id in enumerate(feedIdList):            
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
             feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
-
+            
             # feed별 중복제거
-            feedDF = pd.read_csv(feedPath,sep='\t',encoding='utf-8') 
+            feedDF = pd.read_csv(feedPath, sep='\t', encoding='utf-8', dtype=str) # dtype 명시
             feedDF = feedDF.drop_duplicates(['id'], ignore_index=True)
             
-            # feed_all 쓰기 (머천센터등 필요)
+            # feed_all 쓰기 (이어쓰기) (머천센터등 필요)
             self.feedWrite(i, feedPath=feedAllPath, df=feedDF)
-            # feed 쓰기
-            self.feedWrite(feedPath=feedPath, df=feedDF)
+            # feed 쓰기 (새로쓰기)
+            self.feedWrite(feedPath=feedPath, df=feedDF)            
 
             # memory clean
             del[[feedDF]]
@@ -111,14 +114,14 @@ class ConvertProcess():
 
             # 압축 / tsv 제거 / 업로드
             self.fileService.zipped(feedPath, feedPath+".zip")            
-            self.fileService.delete(feedPath)
+            # self.fileService.delete(feedPath)
             # [3. upload]
             if isUpload :
                 self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")
-        self.fileService.delete(feedAllPath)
+        # self.fileService.delete(feedAllPath)
     
         self.logger.info('==Feed Convert Process End==')
             
@@ -145,8 +148,9 @@ class ConvertProcess():
         result = pd.read_csv(filePath,
                             nrows=None,
                             chunksize=chunkSize, # 일단 10만
-                            header=0, # header row                            
-                            dtype=str, # string type 인식
+                            header=0, # header row
+                            dtype=str, # string type 인식                            
+                            # converters={'id': lambda x: print(x)},
                             sep=seperator, # 명시
                             # lineterminator='\r',
                             error_bad_lines=False, # error skip
@@ -160,17 +164,17 @@ class ConvertProcess():
         os.makedirs(os.path.dirname(feedPath), exist_ok=True) # 경로확인/생성
         if num == 0:
             mode='w' # 새로쓰기
-            header=True 
+            header=True
         else:
             mode='a' # 이어쓰기
             header=False
-        
+
         df.to_csv(feedPath, 
                     index=False, # 자체 인덱스제거
                     sep='\t', 
                     mode=mode,
                     header=header, # 컬럼명 
-                    encoding='utf-8')    
+                    encoding='utf-8')
 
 
     '''
