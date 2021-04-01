@@ -88,7 +88,8 @@ class FileService():
 
         # ep_update 체크
         if isUpdate == True and 'ep_update' not in config:
-            raise HTTPException(400, 'ep_update not found in config')
+            # raise HTTPException(400, 'ep_update not found in config')
+            return ResponseModel(message='ep_update not found in config')
 
         # 원본파일 변동 확인
         if os.path.isfile(config[epKey]['fullPath']) : # 다운받은 파일이 있는 경우
@@ -101,9 +102,9 @@ class FileService():
 
             if epModDate > epOriModDate : #  or epSize == epOriSize:
                 content = {
-                    'server':{'url':config[epKey]['url'], 'moddate': epOriModDate},
-                    'local': {'path':config[epKey]['fullPath'], 'moddate': epModDate}
-                }
+                    'server':{'url':config[epKey]['url'], 'moddate': epOriModDate.strftime('%Y-%m-%d %H:%M:%S %z')},
+                    'local': {'path':config[epKey]['fullPath'], 'moddate': epModDate.strftime('%Y-%m-%d %H:%M:%S %z')}
+                }                
                 return ResponseModel(message='file not changed', content=content)
 
         # 서버단위 중복 다운로드 방지
@@ -118,19 +119,18 @@ class FileService():
             # 다운로드
             if 'http' in config[epKey]['url']: # download
                 result = await self.download(config[epKey]['url'], config[epKey]['fullPath'])
-            else: # file copy *local test용
+            else: # 경로가 file 인경우 copy
                 result = await self.copy(config[epKey]['url'], config[epKey]['fullPath'])
 
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':'', f'{epKey}.moddate':Utils.nowtime()}})
             # 파일백업
             # fileService.zipped(config[epKey]['fullPath'], config[epKey]['backupPath'])
-
             return ResponseModel(message='download complete', content=result)            
 
         except Exception as e :
-            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':''}})
-            print(e)
-            raise HTTPException(status_code=400, detail=str(e))
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':''}})            
+            # raise HTTPException(status_code=400, detail=str(e))
+            return ResponseModel(message=str(e))
                 
         
 

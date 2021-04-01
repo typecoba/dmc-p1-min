@@ -43,6 +43,6 @@ class ResponseMiddleware():
         # 내용추가
         if responseModel != None :             
             resdict['message'] = responseModel['message']
-            resdict['content'] = responseModel['content']            
+            resdict['content'] = responseModel['content']
         
         return JSONResponse(resdict, status_code=response.status_code)

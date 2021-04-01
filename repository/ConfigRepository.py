@@ -84,8 +84,10 @@ class ConfigRepository():
             
             # 피드가 한개인경우엔 동일함..
             catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
+            catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}'
             if 'ep_update' in config: # ep_update 있는경우
                 catalogDict['feed_all']['fullPath_update'] = f'{feedPath}/{feedAllUpdateFileName}'
+                catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}'
 
             # feed
             for feed_id, feed in catalogDict['feed'].items():

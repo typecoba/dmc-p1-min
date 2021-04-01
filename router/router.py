@@ -149,7 +149,7 @@ async def getEpConvert2feed(catalog_id):
     
     try:
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING, 'info.moddate':Utils.nowtime()}})
-        ConvertProcess(config).execute(catalog_id=catalog_id)
+        await ConvertProcess(config).execute(catalog_id=catalog_id)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'', 'info.moddate':Utils.nowtime()}})
         return ResponseModel(message='convert complete')
 
@@ -172,7 +172,7 @@ async def getEpConvert2feed(catalog_id):
     
     try :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
-        ConvertProcess(config).execute(catalog_id=catalog_id, isUpdate=True)
+        await ConvertProcess(config).execute(catalog_id=catalog_id, isUpdate=True)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
         return ResponseModel(message='convert complete')
 
@@ -261,23 +261,24 @@ async def getFeedUploadUpdate(catalog_id):
 @router.get('/schedule')
 async def getSchedule():
     configs = configRepository.findAll()
+    properties = Properties()
+    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
     
-    for config in configs: # config 전체        
+    for config in configs: # config 전체
         # ep cron
         if pycron.is_now(config['ep']['cron']) : # cron check            
-            convertProcess = ConvertProcess(config)
-            # 비동기
+            convertProcess = ConvertProcess(config)            
             for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
                 print(catalogDict['name'], catalog_id)
-                await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=True) # catalog_id 기준으로 실행
+                await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=isUpload) # catalog_id 기준으로 실행
 
 
         # ep_update cron
-        if ('ep_update' in config) and pycron.is_now(config['ep']['cron']) :
+        if ('ep_update' in config) and pycron.is_now(config['ep']['cron']) :            
             convertProcess = ConvertProcess(config)            
             for catalog_id, catalogDict in config['catalog'].items() :
                 print(catalogDict['name'], catalog_id)
-                await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=True)
+                await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=isUpload)
                         
     return ResponseModel(content='scheduled')
 
@@ -286,9 +287,10 @@ async def getSchedule():
 @router.get('/test/apiupload')
 async def test_apiupload():
     feed_id = '236164118048821'
+    # feed_url = 'http://api.dmcf1.com/feed/268046537186348/feed_268046537186348_2499714026735797.tsv.zip'
     feed_url = 'http://api.dmcf1.com/feed/141118536454632/watermark_141118536454632.json.gz'
     isUpdate = False
-    await facebookAPI.upload(feed_id, None, isUpdate)
+    await facebookAPI.upload(feed_id, feed_url, isUpdate)
     return ResponseModel()
 
 @router.get('/test/download')
