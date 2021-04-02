@@ -258,7 +258,7 @@ async def getFeedUploadUpdate(catalog_id):
 
 # scheduled feed convert process
 # 10분마다 호출하여 cron 체크 후 실행
-@router.get('/schedule')
+@router.get('/schedule/convertProcess')
 async def getSchedule():
     configs = configRepository.findAll()
     properties = Properties()

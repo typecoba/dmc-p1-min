@@ -81,7 +81,7 @@ class FileService():
     '''    
     async def getEpDownload(self, catalog_id=None, isUpdate=False): # type = '' or 'update'
         configRepository = ConfigRepository()        
-        config = configRepository.findOne(catalog_id)
+        config = configRepository.findOne(catalog_id)        
 
         # ep / ep_update flag
         epKey = 'ep_update' if isUpdate == True else 'ep'
@@ -131,6 +131,7 @@ class FileService():
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':''}})            
             # raise HTTPException(status_code=400, detail=str(e))
             return ResponseModel(message=str(e))
+        
                 
         
 
@@ -150,7 +151,7 @@ class FileService():
                         await f.write(chunk)
 
                     result = self.getInfo(toPath)
-                    self.logger.info('Download complete : ' + str(result))
+                    # self.logger.info('Download complete : ' + str(result))
                     response.close()
                     return result
 

@@ -43,11 +43,13 @@ class ConvertProcess():
         self.convertFilter.setLogger(self.logger)
         
         # [1. download]
-        responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdate=isUpdate)        
-        self.logger.info(f'[ 1.EP DOWNLOAD ] {responseModel.get()}')
+        self.logger.info('[ 1.EP DOWNLOAD ]')
+        responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdate=isUpdate)
+        self.logger.info(responseModel.get())
+    
 
         # [2. convert]
-        self.logger.info(f'[ 2.CONVERT ]')
+        self.logger.info('[ 2.CONVERT - filtering]')
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
         if isUpdate : 
@@ -92,7 +94,8 @@ class ConvertProcess():
         
         
 
-        # 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드        
+        # 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
+        self.logger.info('[ 3.CONVERT - zip/upload]')      
         feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
 
         for i, feed_id in enumerate(feedIdList):            
