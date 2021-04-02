@@ -94,7 +94,7 @@ class ConvertProcess():
         
         
 
-        # 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
+        # [3. upload] 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
         self.logger.info('[ 3.CONVERT - zip/upload]')      
         feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
 
@@ -117,14 +117,14 @@ class ConvertProcess():
 
             # 압축 / tsv 제거 / 업로드
             self.fileService.zipped(feedPath, feedPath+".zip")            
-            # self.fileService.delete(feedPath)
-            # [3. upload]
+            self.fileService.delete(feedPath)
+            
             if isUpload :
                 self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")
-        # self.fileService.delete(feedAllPath)
+        self.fileService.delete(feedAllPath)
     
         self.logger.info('==Feed Convert Process End==')
             
