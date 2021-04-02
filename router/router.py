@@ -299,3 +299,11 @@ async def test_download():
     toPath = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv'
     print(toPath)
     await fileService.download(fromPath, toPath)
+
+@router.get('test/ping')
+async def test_ping():
+    logger = Logger()
+    ip = Utils.getIP()
+    logger.info(f'ping ok - {ip}')
+    print(ip)
+
