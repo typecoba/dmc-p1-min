@@ -260,8 +260,7 @@ async def getFeedUploadUpdate(catalog_id):
 # 10분마다 호출하여 cron 체크 후 실행
 @router.get('/schedule/convertProcess')
 async def getSchedule():
-    configs = configRepository.findAll()
-    properties = Properties()
+    configs = configRepository.findAll()    
     isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
     
     for config in configs: # config 전체
@@ -306,4 +305,3 @@ async def test_ping():
     ip = Utils.getIP()
     logger.info(f'ping ok - {ip}')    
     return ResponseModel(message='ping ok', content=ip)
-

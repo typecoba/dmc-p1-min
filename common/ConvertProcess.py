@@ -36,7 +36,8 @@ class ConvertProcess():
 
 
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
-    # ep_update인 경우 convert 후 upload시 isUpdate 플래그 활성
+    # isUpdate : True인경우 ep저장 subfix, api upload시 플래그 전달
+    # isUpload : True인경우 api upload 실행
     async def execute(self, catalog_id=None, isUpdate=False, isUpload=False):
         self.logger.info('==Feed Convert Process Start==')
         self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
@@ -49,7 +50,7 @@ class ConvertProcess():
     
 
         # [2. convert]
-        self.logger.info('[ 2.CONVERT - filtering]')
+        self.logger.info('[ 2.CONVERT - filtering ]')
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
         if isUpdate : 
@@ -95,7 +96,7 @@ class ConvertProcess():
         
 
         # [3. upload] 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
-        self.logger.info('[ 3.CONVERT - zip/upload]')      
+        self.logger.info('[ 3.CONVERT - drop_duplicate/zip ]')      
         feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
 
         for i, feed_id in enumerate(feedIdList):            
@@ -120,7 +121,8 @@ class ConvertProcess():
             self.fileService.delete(feedPath)
             
             if isUpload :
-                self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
+                self.logger.info('[ 4.UPLOAD ]')
+                await self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")

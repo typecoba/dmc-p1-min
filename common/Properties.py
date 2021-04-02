@@ -72,7 +72,7 @@ class Properties() :
         self.__feedBackupPath = rootPath + prop(f'{self.SERVER_PREFIX}_feed_backup_path')
         self.__logPath =        os.getcwd().replace('\\','/') + prop(f'{self.SERVER_PREFIX}_log_path') # 프로젝트 root
         self.__convertLogPath = os.getcwd().replace('\\','/') + prop(f'{self.SERVER_PREFIX}_convert_log_path') # 프로젝트 root
-
+    
     
     def getServerHost(self):
         return self.__server_host
