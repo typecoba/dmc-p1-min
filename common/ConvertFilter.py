@@ -61,11 +61,11 @@ class ConvertFilter():
         # include
         if 'include' in self.config['filter']:            
             for key,value in self.config['filter']['include'].items():
-                dataframe = dataframe[dataframe[key].str.contains('|'.join(value))]
+                dataframe = dataframe[dataframe[key].str.contains('|'.join(value), na=False)]
         # exclude
         if 'exclude' in self.config['filter']:            
             for key,value in self.config['filter']['exclude'].items() :                
-                dataframe = dataframe[~dataframe[key].str.contains('|'.join(value))]
+                dataframe = dataframe[~dataframe[key].str.contains('|'.join(value), na=False)]
         # replace
         if 'replace' in self.config['filter']:
             for key,value in self.config['filter']['replace'].items() :                 
