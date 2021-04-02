@@ -300,10 +300,10 @@ async def test_download():
     print(toPath)
     await fileService.download(fromPath, toPath)
 
-@router.get('test/ping')
+@router.get('/test/ping')
 async def test_ping():
     logger = Logger()
     ip = Utils.getIP()
-    logger.info(f'ping ok - {ip}')
-    print(ip)
+    logger.info(f'ping ok - {ip}')    
+    return ResponseModel(message='ping ok', content=ip)
 
