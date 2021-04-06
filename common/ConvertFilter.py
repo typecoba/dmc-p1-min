@@ -30,23 +30,37 @@ class ConvertFilter():
     def mediaFilter(self, dataframe=None):
 
         # 컬럼추출 columns {'a':'b'}  'a'->'b'
-        keys = list(self.config['columns'].keys())
-        dataframe = dataframe[keys] # 필요컬럼만        
+        keys = list(self.config['columns'].keys())        
+        dataframe = dataframe[keys] # 필요컬럼만
         dataframe.rename(columns=self.config['columns'], inplace=True) # key 수정            
-        # print(dataframe.columns)
+        
 
         # 공백제거, result.apply(lambda x: x.str.strip(), axis=1) 로 돌리면 너무느림
         for key in list(dataframe.columns) :
             dataframe[key] = dataframe[key].str.strip()
 
+        print(dataframe.columns)
 
-        if self.config['info']['media'] == 'facebook' :                            
+        if self.config['info']['media'] == 'facebook' :
             # title 150자 이내
             dataframe['title'] = dataframe['title'].str[:100]
 
+            # product_type
+            # category_1~4 연결해서 입력
+            product_type = pd.Series()
+            for i in range(4) : # 0-4
+                if f'category_{i+1}' in dataframe : 
+                    if product_type.size == 0 : 
+                        product_type = dataframe[f'category_{i+1}'].copy()
+                    else :   
+                        product_type = product_type.str.cat(dataframe[f'category_{i+1}'], sep='@') # @구분자로 연결
+                    dataframe = dataframe.drop(f'category_{i+1}', axis=1)
+            if product_type.size != 0 :
+                dataframe['product_type'] = product_type
+
             # 기본값
-            if 'availability' not in dataframe :                
-                dataframe = dataframe.assign(availability='in stock')            
+            if 'availability' not in dataframe :
+                dataframe = dataframe.assign(availability='in stock')
             if 'condition' not in dataframe : 
                 dataframe = dataframe.assign(condition='new')
             if 'description' not in dataframe :

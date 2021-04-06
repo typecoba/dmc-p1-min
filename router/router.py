@@ -214,7 +214,7 @@ async def getFeedExport(catalog_id, feed_id):
     return response
 
 
-# feed segment 분할
+# feed segment 분할만.. 삭제예정
 @router.get('/feed/segmentation/{catalog_id}')
 async def getFeedSegmentation(catalog_id):
     config = configRepository.findOne(catalog_id)
