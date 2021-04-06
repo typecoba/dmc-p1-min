@@ -100,10 +100,10 @@ class FileService():
             epSize = epInfo['size']                                 # 로컬 ep size
             epModDate = parser.parse(epInfo['last_moddate'])        # 로컬 ep 생성시간
 
-            if epModDate > epOriModDate : #  or epSize == epOriSize:
+            if epModDate > epOriModDate  or epSize == epOriSize :
                 content = {
-                    'server':{'url':config[epKey]['url'], 'moddate': epOriModDate.strftime('%Y-%m-%d %H:%M:%S %z')},
-                    'local': {'path':config[epKey]['fullPath'], 'moddate': epModDate.strftime('%Y-%m-%d %H:%M:%S %z')}
+                    'server':{'url':config[epKey]['url'], 'size':epSize ,'moddate': epOriModDate.strftime('%Y-%m-%d %H:%M:%S %z')},
+                    'local': {'path':config[epKey]['fullPath'], 'size':epSize, 'moddate': epModDate.strftime('%Y-%m-%d %H:%M:%S %z')}
                 }                
                 return ResponseModel(message='file not changed', content=content)
 
