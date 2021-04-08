@@ -116,14 +116,21 @@ class ConvertFilter():
                                     '&utm_source=facebook&utm_medium=display_retargeting_mo&utm_campaign=mo&utm_term=retargeting_dynamic_2&adBridge=1&appinstall=2'
             elif self.catalog_id == '2874651496189057': # hellonature_일반
                 dataframe['link'] = 'https://www.hellonature.co.kr/fdp001.do?goTo=dpItemView&itemCd=' + dataframe['id']
-            elif self.catalog_id == '1082436905600544': # hellonature_ba_deep
+            elif self.catalog_id == '1082436905600544': # hellonature_ba_aos
                 dataframe['link'] = 'https://app.appsflyer.com/net.hellonature?pid=facebook_int&c=display_usertargeting_mo_aos_ba_1_210225&af_click_lookback=1d&is_retargeting=true&af_reengagement_window=1d&af_r=' + \
                                     'https%3A%2F%2Fgo.hellonature.co.kr%2F%3Fadlink%3Dhttps%3A%2F%2Fwww.hellonature.co.kr%2Ffdp001.do%3FgoTo%3DdpItemView%26itemCd%3D' + dataframe['id'] + \
-                                    '%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_usertargeting_mo%26utm_campaign%3Daos%26utm_term%3Dba_1_210225%26adBridge%3D1%26appinstall%3D1'                                        
-            elif self.catalog_id == '2364384170351822': # hellonature_re_deep
+                                    '%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_usertargeting_mo%26utm_campaign%3Daos%26utm_term%3Dba_1_210225%26adBridge%3D1%26appinstall%3D1'
+            elif self.catalog_id == '2364384170351822': # hellonature_re_aos
                 dataframe['link'] = 'https://app.appsflyer.com/net.hellonature?pid=facebook_int&c=display_retargeting_mo_aos_dynamic_1_210225&af_click_lookback=1d&is_retargeting=true&af_reengagement_window=1d&af_r=' + \
                                     'https%3A%2F%2Fgo.hellonature.co.kr%2F%3Fadlink%3Dhttps%3A%2F%2Fwww.hellonature.co.kr%2Ffdp001.do%3FgoTo%3DdpItemView%26itemCd%3D' + dataframe['id'] + \
-                                    '%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_retargeting_mo%26utm_campaign%3Daos%26utm_term%3Ddynamic_1_210225%26adBridge%3D1%26appinstall%3D1'                                            
-        
+                                    '%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_retargeting_mo%26utm_campaign%3Daos%26utm_term%3Ddynamic_1_210225%26adBridge%3D1%26appinstall%3D1'
+            elif self.catalog_id == '276558370748503': # hellonature_ba_ios
+                dataframe['link'] = 'https://app.appsflyer.com/id1098023186?pid=facebook_int&c=facebook_display_usertargeting_mo_ios_ba_1_210226&af_click_lookback=1d&idfa={aff_sub2}&af_lang={lang}&af_ua={useragent}&af_ip={ip}&is_retargeting=true&af_reengagement_window=1d&af_r=' + \
+									'https%3A%2F%2Fgo.hellonature.co.kr%2F%3Fadlink%3Dhttps%3A%2F%2Fwww.hellonature.co.kr%2Ffdp001.do%3FgoTo%3DdpItemView%26itemCd%3D' + dataframe['id'] + \
+									'%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_retargeting_mo%26utm_campaign%3Dios%26utm_term%3Ddynamic_1_210226%26adBridge%3D1%26appinstall%3D1'
+            elif self.catalog_id == '1428958314113899': # hellonature_re_ios
+                dataframe['link'] = 'https://app.appsflyer.com/id1098023186?pid=facebook_int&c=facebook_display_retargeting_mo_ios_dynamic_1_210311&af_click_lookback=1d&idfa={aff_sub2}&af_lang={lang}&af_ua={useragent}&af_ip={ip}&is_retargeting=true&af_reengagement_window=1d&af_r=' + \
+									'https%3A%2F%2Fgo.hellonature.co.kr%2F%3Fadlink%3Dhttps%3A%2F%2Fwww.hellonature.co.kr%2Ffdp001.do%3FgoTo%3DdpItemView%26itemCd%3D' + dataframe['id'] + \
+									'%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_retargeting_mo%26utm_campaign%3Dios%26utm_term%3Ddynamic_1_210311%26adBridge%3D1%26appinstall%3D1'
         return dataframe
         
