@@ -264,16 +264,17 @@ async def getSchedule():
     isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
     
     for config in configs: # config 전체
-        # ep cron        
-        if config['ep']['cron'] != ''  and pycron.is_now(config['ep']['cron']) : # cron check            
-            convertProcess = ConvertProcess(config)            
+        # print(config['info']['name'], config['ep']['cron'], config['ep']['cron']!='')
+        
+        # ep cron
+        if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']): # cron check        
+            convertProcess = ConvertProcess(config)
             for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
                 print(catalogDict['name'], catalog_id)
                 await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=isUpload) # catalog_id 기준으로 실행
 
-
         # ep_update cron
-        if ('ep_update' in config) and config['ep_update']['cron'] != '' and pycron.is_now(config['ep_update']['cron']) :
+        if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']): 
             convertProcess = ConvertProcess(config)            
             for catalog_id, catalogDict in config['catalog'].items() :
                 print(catalogDict['name'], catalog_id)
