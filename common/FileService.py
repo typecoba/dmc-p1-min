@@ -39,7 +39,8 @@ class FileService():
 
             result = {
                 'url': filePath,
-                'size': Utils.sizeof_fmt(int(response['Content-Length'])),
+                'size': int(response['Content-Length']),
+                'size_formated' : Utils.sizeof_fmt(int(response['Content-Length'])),
                 'last_moddate': mdatetime
             }
 
@@ -57,7 +58,8 @@ class FileService():
             mdatetime = datetime.fromtimestamp(mtime, timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %z')
             result = {
                 'path': filePath,
-                'size': Utils.sizeof_fmt(size),
+                'size': size,
+                'size_formated': Utils.sizeof_fmt(size),
                 'last_moddate': mdatetime
             }
         
@@ -99,13 +101,13 @@ class FileService():
             epInfo = self.getInfo(config[epKey]['fullPath'])        # 로컬 ep info
             epSize = epInfo['size']                                 # 로컬 ep size
             epModDate = parser.parse(epInfo['last_moddate'])        # 로컬 ep 생성시간
+            # print('epmoddate',epModDate, 'eporimoddate',epOriModDate)
+            # print(epModDate > epOriModDate)
+            # print('epSize', epSize, 'epOriSize', epOriSize)
+            # print(epSize==epOriSize)
 
-            if epModDate > epOriModDate  or epSize == epOriSize :
-                content = {
-                    'server':{'url':config[epKey]['url'], 'size':epSize ,'moddate': epOriModDate.strftime('%Y-%m-%d %H:%M:%S %z')},
-                    'local': {'path':config[epKey]['fullPath'], 'size':epSize, 'moddate': epModDate.strftime('%Y-%m-%d %H:%M:%S %z')}
-                }                
-                return ResponseModel(message='file not changed', content=content)
+            if epModDate >= epOriModDate  or epSize == epOriSize :                
+                return ResponseModel(message='file not changed', content={ 'server': epOriInfo, 'local': epInfo })
 
         # 서버단위 중복 다운로드 방지
         if config[epKey]['status'] == Properties.STATUS_DOWNLOADING:            
