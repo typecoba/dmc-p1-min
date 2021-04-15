@@ -24,7 +24,7 @@ from common.Properties import Properties
 -util
 '''
 
-app = FastAPI(title='FeedConvert_api')
+app = FastAPI()
 
 # 라우터
 app.include_router(router.router)
@@ -40,7 +40,7 @@ app.middleware('http')(ResponseMiddleware())
 # run server
 if __name__ == '__main__':        
     prop = Properties()    
-    uvicorn.run('main:app', 
+    uvicorn.run('main_feedconvert_api:app', 
                 host=prop.SERVER_API_HOST,
                 port=prop.getServerPort(), 
                 workers=prop.SERVER_API_WORKERS, 
