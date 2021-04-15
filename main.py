@@ -24,7 +24,7 @@ from common.Properties import Properties
 -util
 '''
 
-app = FastAPI()
+app = FastAPI(title='FeedConvert_api')
 
 # 라우터
 app.include_router(router.router)
