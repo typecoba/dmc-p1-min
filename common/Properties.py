@@ -38,7 +38,7 @@ class Properties() :
     더 스마트한 방법이 없을까?
     '''
     def __init__(self):
-        prop = Config('property.env')        
+        prop = Config('./property.env')        
         self.__facebookAccessToken = prop('facebook_api_access_token')
 
         # ip check
