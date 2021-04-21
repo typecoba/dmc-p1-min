@@ -129,9 +129,7 @@ dmypy.json
 .pyre/
 
 # data
-/data/logs/*
-/data/feed/*
-/data/ep/*
+/data
 /test/data
 
 # environment

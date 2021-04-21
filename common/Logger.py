@@ -18,7 +18,7 @@ class Logger():
         prop = Properties()        
 
         # make dir
-        os.makedirs(os.path.dirname(prop.getLogPath()), exist_ok=True) # 경로확인/생성
+        os.makedirs(prop.getLogPath(), exist_ok=True) # 기본 경로확인/생성
 
         config = {
             'version': 1,
