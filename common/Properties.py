@@ -37,15 +37,13 @@ class Properties() :
     '''
     더 스마트한 방법이 없을까?
     '''
-    def __init__(self):
-        rootPath = os.getcwd().replace('\\','/') # 프로젝트 root 절대경로
-
-        prop = Config(f'{rootPath}/property.env')
+    def __init__(self):    
+        prop = Config(f'{rootPath}/property.env')        
         self.__facebookAccessToken = prop('facebook_api_access_token')
 
         # ip check
         ip = Utils.getIP()
-        rootPath = ''        
+        rootPath = ''
         if ip == prop('prod_server_host') : # prod
             self.SERVER_PREFIX = 'prod'
             self.__server_domain = 'http://api.dmcf1.com'
@@ -56,8 +54,10 @@ class Properties() :
 
         else : # 나머진 local로 간주
             self.SERVER_PREFIX = 'local'
-            self.SERVER_AUTO_RELOAD = True            
+            self.SERVER_AUTO_RELOAD = True
+            rootPath = os.getcwd().replace('\\','/') # local에만 프로젝트 root 절대경로
             self.__server_domain = rootPath 
+            
         
         self.__server_host = prop(f'{self.SERVER_PREFIX}_server_host')
         self.__server_port = prop(f'{self.SERVER_PREFIX}_server_port')        
@@ -71,8 +71,8 @@ class Properties() :
         self.__epBackupPath =   rootPath + prop(f'{self.SERVER_PREFIX}_ep_backup_path')
         self.__feedPath =       rootPath + prop(f'{self.SERVER_PREFIX}_feed_path')
         self.__feedBackupPath = rootPath + prop(f'{self.SERVER_PREFIX}_feed_backup_path')
-        self.__logPath =        os.getcwd().replace('\\','/') + prop(f'{self.SERVER_PREFIX}_log_path') # 프로젝트 root
-        self.__convertLogPath = os.getcwd().replace('\\','/') + prop(f'{self.SERVER_PREFIX}_convert_log_path') # 프로젝트 root
+        self.__logPath =        rootPath + prop(f'{self.SERVER_PREFIX}_log_path') # 프로젝트 root
+        self.__convertLogPath = rootPath + prop(f'{self.SERVER_PREFIX}_convert_log_path') # 프로젝트 root
     
     
     def getServerHost(self):
