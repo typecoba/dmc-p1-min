@@ -38,7 +38,9 @@ class Properties() :
     더 스마트한 방법이 없을까?
     '''
     def __init__(self):
-        prop = Config('./property.env')        
+        rootPath = os.getcwd().replace('\\','/') # 프로젝트 root 절대경로
+
+        prop = Config(f'{rootPath}/property.env')
         self.__facebookAccessToken = prop('facebook_api_access_token')
 
         # ip check
@@ -54,8 +56,7 @@ class Properties() :
 
         else : # 나머진 local로 간주
             self.SERVER_PREFIX = 'local'
-            self.SERVER_AUTO_RELOAD = True
-            rootPath = os.getcwd().replace('\\','/') # 프로젝트 root 절대경로
+            self.SERVER_AUTO_RELOAD = True            
             self.__server_domain = rootPath 
         
         self.__server_host = prop(f'{self.SERVER_PREFIX}_server_host')
