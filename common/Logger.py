@@ -20,9 +20,11 @@ class Logger():
         # make dir
         os.makedirs(prop.getLogPath(), exist_ok=True) # 기본 경로확인/생성
 
+        isRootLogger = True if prop.SERVER_PREFIX=='prod' else False
+        
         config = {
             'version': 1,
-            'disable_existing_loggers': False,
+            'disable_existing_loggers': isRootLogger,
             'formatters': {
                 'minimum': {'format':'%(asctime)s %(message)s'},
                 'default': {'format':'%(asctime)s [%(name)s] %(levelname)s : %(message)s'}
