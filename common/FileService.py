@@ -106,7 +106,7 @@ class FileService():
             # print('epSize', epSize, 'epOriSize', epOriSize)
             # print(epSize==epOriSize)
 
-            if epModDate >= epOriModDate  or epSize == epOriSize :                
+            if epModDate >= epOriModDate and epSize == epOriSize :                
                 return ResponseModel(message='file not changed', content={ 'server': epOriInfo, 'local': epInfo })
 
         # 서버단위 중복 다운로드 방지
@@ -158,6 +158,12 @@ class FileService():
                     return result
 
 
+    # urllib.request
+    def download_temp(self, fromUrl, toPath):
+        os.makedirs(os.path.dirname(toPath), exist_ok=True)        
+        request.urlretrieve(fromUrl, toPath)
+        result = self.getInfo(toPath)
+        return result
 
         
     # copy        
