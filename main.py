@@ -31,7 +31,8 @@ app.include_router(router.router)
 
 # exception handler
 @app.exception_handler(StarletteHTTPException)
-async def exception_handler(request, exc):
+async def exception_handler(request: Request, exc: Exception):
+    print(exc.detail)
     return JSONResponse({"message": exc.detail, "content": None}, status_code=exc.status_code)
 
 # response middleware

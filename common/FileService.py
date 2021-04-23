@@ -22,7 +22,7 @@ from pytz import timezone
 
 class FileService():
     def __init__(self):
-        self.logger = Logger() # 기본로거 root
+        pass        
 
     def setLogger(self, logger=None):
         self.logger = logger    

@@ -168,7 +168,7 @@ async def getEpConvert2feed(catalog_id):
         raise HTTPException(400, 'ep_update not found in config')
 
     if config['info']['status'] == properties.STATUS_CONVERTING : # status값을 상수로 만들어야겠다..
-        raise HTTPException(400, 'convert already started at {config["info"]["moddate"]}...')
+        raise HTTPException(400, 'convert process not finished or force stopping at {config["info"]["moddate"]}...')
     
     try :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
@@ -301,8 +301,6 @@ async def test_download():
     await fileService.download(fromPath, toPath)
 
 @router.get('/test/ping')
-async def test_ping():
-    logger = Logger()
+async def test_ping():    
     ip = Utils.getIP()
-    logger.info(f'ping ok - {ip}')    
     return ResponseModel(message='ping ok', content=ip)

@@ -33,7 +33,7 @@ class ResponseMiddleware():
         logger.info(f'**Response duration={duration} status_code={response.status_code}')
         
         # 공통내용
-        resdict = {
+        content = {
             "statusCode": response.status_code,
             "statusName": requests.status_codes._codes[response.status_code][0],            
             "responseTime": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # 반환시간
@@ -42,7 +42,7 @@ class ResponseMiddleware():
 
         # 내용추가
         if responseModel != None :             
-            resdict['message'] = responseModel['message']
-            resdict['content'] = responseModel['content']
+            content['message'] = responseModel['message']
+            content['content'] = responseModel['content']
         
-        return JSONResponse(resdict, status_code=response.status_code)
+        return JSONResponse(content, status_code=response.status_code)

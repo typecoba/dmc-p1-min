@@ -60,13 +60,15 @@ class Logger():
             }
 
         # config 
-        logging.config.dictConfig(config)
+        # logging.config.dictConfig(config)
 
-        # logger
-        # name 기준으로 싱글톤으로 생성
-        self.logger = logging.getLogger(name) 
+        # logger name 기준으로 싱글톤으로 생성        
+        # self.logger = logging.getLogger(name) 
+        
+        
         # self.logger.addHandler(MongoHandler(host='localhost'))
         
 
     def info(self, msg=None):
-        self.logger.info(msg)
+        print(msg)
+        # self.logger.info(msg)

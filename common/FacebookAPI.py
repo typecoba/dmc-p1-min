@@ -8,8 +8,7 @@ class FacebookAPI():
     # config
     prop = Properties()    
 
-    def __init__(self):        
-        self.logger = Logger() # 기본로거
+    def __init__(self):
         pass
 
     def setLogger(self, logger=None):
