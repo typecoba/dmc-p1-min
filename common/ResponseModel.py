@@ -9,9 +9,9 @@ class ResponseModel():
     content: any
     
     # 일단 심플하게 구성
-    def __init__(self, message=None, content=None):
-        self.message = message        
-        self.content = content        
+    def __init__(self, message=None, content=None):        
+        self.message = message
+        self.content = content
 
     def get(self):
         # none값 반환을 위해 json serialized

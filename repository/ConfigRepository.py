@@ -40,7 +40,7 @@ class ConfigRepository():
             self.setPath(config)
             return config
         else :
-            raise HTTPException(status_code=400, detail='config not found')
+            raise HTTPException(status_code=400, detail=f'config not found at {catalog_id}')
                 
     
     def insertOne(self, config=None):
