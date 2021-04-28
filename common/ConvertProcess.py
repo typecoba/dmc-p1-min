@@ -45,8 +45,11 @@ class ConvertProcess():
         
         # [1. download]
         self.logger.info('[ 1.EP DOWNLOAD ]')
-        responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdate=isUpdate)
-        self.logger.info(responseModel.get())
+        try :
+            responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdate=isUpdate)            
+            self.logger.info(responseModel.get())
+        except Exception as e :            
+            self.logger.info(str(e)) # 여기에서 exception이 제대로 찍혀야함
     
 
         # [2. convert]

@@ -30,10 +30,9 @@ app = FastAPI()
 app.include_router(router.router)
 
 # exception handler
-@app.exception_handler(StarletteHTTPException)
-async def exception_handler(request: Request, exc: Exception):
-    print(exc.detail)
-    return JSONResponse({"message": exc.detail, "content": None}, status_code=exc.status_code)
+@app.exception_handler(StarletteHTTPException)#
+async def exception_handler(request: Request, e: Exception):
+    return JSONResponse({"message" : e.detail, "content" : ''}, status_code=400) # responseModel과 같은 정보로 전달
 
 # response middleware
 app.middleware('http')(ResponseMiddleware())

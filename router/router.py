@@ -121,14 +121,19 @@ async def getEpExport(catalog_id):
 # 
 @router.get('/ep/download/{catalog_id}')
 async def getDownload(catalog_id):
-    return  await fileService.getEpDownload(catalog_id=catalog_id)
+    try :        
+        return await fileService.getEpDownload(catalog_id=catalog_id)
+    except Exception as e :    
+        raise e        
 
 
 # ep_update 경로 추가
 @router.get('/ep/download/{catalog_id}/update')
-async def getDownloadUpdate(catalog_id):    
-    return await fileService.getEpDownload(catalog_id=catalog_id, isUpdate=True)
-
+async def getDownloadUpdate(catalog_id): 
+    try:    
+        return await fileService.getEpDownload(catalog_id=catalog_id, isUpdate=True)
+    except Exception as e :
+        raise e
     
 
 
@@ -140,14 +145,14 @@ async def getDownloadUpdate(catalog_id):
 
 # ep 변환(만) 단위테스트
 @router.get('/ep/convert2feed/{catalog_id}')
-async def getEpConvert2feed(catalog_id):
-    config = ConfigRepository().findOne(catalog_id)
-    
-    # exception
-    if config['info']['status'] == properties.STATUS_CONVERTING :
-        raise HTTPException(status_code=400, detail=f'convert already started at {config["info"]["moddate"]}...')
-    
+async def getEpConvert2feed(catalog_id):        
     try:
+        config = ConfigRepository().findOne(catalog_id)
+    
+        # exception
+        if config['info']['status'] == properties.STATUS_CONVERTING :
+            raise HTTPException(status_code=400, detail=f'convert already started at {config["info"]["moddate"]}...')
+            
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING, 'info.moddate':Utils.nowtime()}})
         await ConvertProcess(config).execute(catalog_id=catalog_id)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'', 'info.moddate':Utils.nowtime()}})
@@ -155,7 +160,7 @@ async def getEpConvert2feed(catalog_id):
 
     except Exception as e :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'', 'info.moddate':Utils.nowtime()}})
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=100, detail=str(e))
         
 
 # ep_update 변환 단위테스트
@@ -168,7 +173,8 @@ async def getEpConvert2feed(catalog_id):
         raise HTTPException(400, 'ep_update not found in config')
 
     if config['info']['status'] == properties.STATUS_CONVERTING : # status값을 상수로 만들어야겠다..
-        raise HTTPException(400, 'convert process not finished or force stopping at {config["info"]["moddate"]}...')
+        
+        raise HTTPException(400, 'convert process not finished or force stopping')
     
     try :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
@@ -259,7 +265,7 @@ async def getFeedUploadUpdate(catalog_id):
 # scheduled feed convert process
 # 10분마다 호출하여 cron 체크 후 실행
 @router.get('/schedule/convertProcess')
-async def getSchedule():
+async def getScheduleConvertProcess():
     configs = configRepository.findAll()    
     isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
     
@@ -280,7 +286,30 @@ async def getSchedule():
                 print(catalogDict['name'], catalog_id)
                 await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=isUpload)
                         
-    return ResponseModel(content='scheduled')
+    return ResponseModel(content='schedule process complete')
+
+
+# 스케줄 프로세스 카탈로그_id기준 실행 (테스트)
+@router.get('/schedule/convertProcess/{catalog_id}')
+async def getScheduleConvertProcess(catalog_id):
+    config = configRepository.findOne(catalog_id)
+    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
+
+    # ep cron
+    if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']): # cron check        
+        convertProcess = ConvertProcess(config)
+        for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
+            print(catalogDict['name'], catalog_id)
+            await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=isUpload) # catalog_id 기준으로 실행
+
+    # ep_update cron
+    if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']): 
+        convertProcess = ConvertProcess(config)            
+        for catalog_id, catalogDict in config['catalog'].items() :
+            print(catalogDict['name'], catalog_id)
+            await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=isUpload)
+
+    return ResponseModel(content=f'{config["info"]["name"]} schedule process complete')
 
 
 

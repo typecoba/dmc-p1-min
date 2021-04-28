@@ -1,4 +1,5 @@
 from urllib import request
+from urllib.error import URLError, HTTPError
 import os
 from datetime import datetime, timedelta
 from dateutil import parser
@@ -17,6 +18,8 @@ from common.ResponseModel import ResponseModel
 from repository.ConfigRepository import ConfigRepository
 import zipfile
 from pytz import timezone
+import json
+
 
 
 
@@ -27,27 +30,35 @@ class FileService():
     def setLogger(self, logger=None):
         self.logger = logger    
     
-    def getInfo(self, filePath=None):        
-        if 'http' in filePath :
+    def getInfo(self, filePath=None):
+        if filePath==None :            
+            raise HTTPException(400, 'filePath is required')
+                
+        if 'http' in filePath : # url인경우
             # file path
-            with request.urlopen(filePath) as f:
-                response = f.info()
-                f.close()
+            try :
+                with request.urlopen(filePath) as f:                
+                    fileInfo = f.info()
+                    f.close()
+            except HTTPError as e :                
+                raise HTTPException(400, f'url is not open at {filePath}' )
+            
 
             # str-> datetime -> timezone 적용 -> formatting
-            mdatetime = parser.parse(response['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %z')
+            mdatetime = parser.parse(fileInfo['Last-Modified']).astimezone(timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M:%S %z')
 
             result = {
                 'url': filePath,
-                'size': int(response['Content-Length']),
-                'size_formated' : Utils.sizeof_fmt(int(response['Content-Length'])),
+                'size': int(fileInfo['Content-Length']),
+                'size_formated' : Utils.sizeof_fmt(int(fileInfo['Content-Length'])),
                 'last_moddate': mdatetime
             }
 
         else : # 파일인경우
             # file check
-            if os.path.exists(filePath) == False: 
-                return None
+            if os.path.exists(filePath) == False:                 
+                raise HTTPException(400, f'file not found at {filePath}')
+
             size = os.path.getsize(filePath) # 파일 크기
             mtime = os.path.getmtime(filePath)  # 수정시간
             # exists = os.path.exists(filePath) # 파일 존재여부
@@ -77,62 +88,57 @@ class FileService():
     1. 원본 ep 와 local ep 시간비교
     2. config status 이용하여 download lock
     3. ep update 플래그로 config 연동
-    
+    4. 실패/생략시 exception이 아니라 logging
     *** convert process 내부에서 연동되므로 exception을 함수 외부로 빼야하나?
 
     '''    
     async def getEpDownload(self, catalog_id=None, isUpdate=False): # type = '' or 'update'
-        configRepository = ConfigRepository()        
-        config = configRepository.findOne(catalog_id)        
+        configRepository = ConfigRepository()
+        config = configRepository.findOne(catalog_id)
 
-        # ep / ep_update flag
-        epKey = 'ep_update' if isUpdate == True else 'ep'
+        try :            
+            # ep / ep_update flag
+            epKey = 'ep_update' if isUpdate == True else 'ep'
 
-        # ep_update 체크
-        if isUpdate == True and 'ep_update' not in config:
-            # raise HTTPException(400, 'ep_update not found in config')
-            return ResponseModel(message='ep_update not found in config')
+            # ep_update 체크
+            if isUpdate == True and 'ep_update' not in config: 
+                return ResponseModel(message='ep_update not found in config', content='')
 
-        # 원본파일 변동 확인
-        if os.path.isfile(config[epKey]['fullPath']) : # 다운받은 파일이 있는 경우
+            # 원본/로컬파일 비교 체크
             epOriInfo = self.getInfo(config[epKey]['url'])          # 오리지널 ep info
-            epOriSize = epOriInfo['size']                           # 오리지널 ep size
-            epOriModDate = parser.parse(epOriInfo['last_moddate'])  # 오리지널 ep 생성시간
             epInfo = self.getInfo(config[epKey]['fullPath'])        # 로컬 ep info
-            epSize = epInfo['size']                                 # 로컬 ep size
-            epModDate = parser.parse(epInfo['last_moddate'])        # 로컬 ep 생성시간
-            # print('epmoddate',epModDate, 'eporimoddate',epOriModDate)
-            # print(epModDate > epOriModDate)
-            # print('epSize', epSize, 'epOriSize', epOriSize)
-            # print(epSize==epOriSize)
+            if epInfo != None : # 다운받은 파일이 있는경우
+                epOriSize = epOriInfo['size']                           # 오리지널 ep size
+                epOriModDate = parser.parse(epOriInfo['last_moddate'])  # 오리지널 ep 생성시간
+                epSize = epInfo['size']                                 # 로컬 ep size
+                epModDate = parser.parse(epInfo['last_moddate'])        # 로컬 ep 생성시간                
 
-            if epModDate >= epOriModDate and epSize == epOriSize :                
-                return ResponseModel(message='file not changed', content={ 'server': epOriInfo, 'local': epInfo })
+                if epModDate >= epOriModDate and epSize == epOriSize : # 로컬ep시간이 최신이고 사이즈 같은경우
+                    return ResponseModel(message='file not changed', content={ 'server': epOriInfo, 'local': epInfo })                    
 
-        # 서버단위 중복 다운로드 방지
-        if config[epKey]['status'] == Properties.STATUS_DOWNLOADING:            
-            return ResponseModel(message='already start download...', content=None)
-
-
-        # ep download
-        try:
+            # 서버단위 중복 다운로드 체크
+            if config[epKey]['status'] == Properties.STATUS_DOWNLOADING :                
+                return ResponseModel(message='already start download')
+            
+            # 다운로드 
+            # 더 상세한 정보 logging 필요        
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':Properties.STATUS_DOWNLOADING}})
-
-            # 다운로드
-            if 'http' in config[epKey]['url']: # download
+            if 'http' in config[epKey]['url'] : # web
                 result = await self.download(config[epKey]['url'], config[epKey]['fullPath'])
-            else: # 경로가 file 인경우 copy
+            else : # local
                 result = await self.copy(config[epKey]['url'], config[epKey]['fullPath'])
-
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':'', f'{epKey}.moddate':Utils.nowtime()}})
+            
             # 파일백업
             # fileService.zipped(config[epKey]['fullPath'], config[epKey]['backupPath'])
-            return ResponseModel(message='download complete', content=result)            
+            return ResponseModel(message='download complete', content=result)
 
-        except Exception as e :
-            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':''}})            
-            # raise HTTPException(status_code=400, detail=str(e))
-            return ResponseModel(message=str(e))
+        except Exception as e : 
+            configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':'', f'{epKey}.moddate':Utils.nowtime()}})
+            raise e            
+        
+        
+        
         
                 
         
