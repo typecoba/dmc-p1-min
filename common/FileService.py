@@ -148,7 +148,8 @@ class FileService():
     # aiohttp
     async def download(self, fromUrl, toPath):
         os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
-        async with aiohttp.ClientSession() as session:
+        connector = aiohttp.TCPConnector(verify_ssl=False) # connector 인증서무시 명시
+        async with aiohttp.ClientSession(connector=connector) as session: 
             async with session.get(fromUrl, timeout=None) as response:
 
                 chunk_size = 1024*1024*10 # 10MB
