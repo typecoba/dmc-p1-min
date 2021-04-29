@@ -40,7 +40,7 @@ class ConvertProcess():
     # isUpload : True인경우 api upload 실행
     async def execute(self, catalog_id=None, isUpdate=False, isUpload=False):
         self.logger.info('==Feed Convert Process Start==')
-        self.convertFilter = ConvertFilter(catalog_id, self.config) # 필터 클래스
+        self.convertFilter = ConvertFilter(self.config, catalog_id, isUpdate) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
         
         # [1. download]

@@ -5,10 +5,11 @@ import os
 
 class ConvertFilter():
 
-    def __init__(self, catalog_id=None, config=None):
+    def __init__(self, config=None, catalog_id=None, isUpdate=None):
         pd.options.mode.chained_assignment = None # pandas warning 관련 알림 제거
         self.config = config        
         self.catalog_id = catalog_id
+        self.isUpdate = isUpdate
         self.result = pd.DataFrame()        
         self.logger = None
 
@@ -121,24 +122,30 @@ class ConvertFilter():
 
             # hmall
             # hmall 카테고리 제외건은 공통필터에서 적용 - config['filter']['exclude']['product_type']
-            elif self.catalog_id == '321875988705706': # hmall 전체상품
-                dataframe['link'] = dataframe.apply(lambda x : # series에 quote 함수 써야해서 apply lambda로 돌림
-                    'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/nQjrNdGHjEu2SkLy7xJuVQ?deeplink_custom_path=' + \
-                    parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
-                    axis=1
-                )
-            elif self.catalog_id == '517196555826417': # hmall 방송상품
-                dataframe['link'] = dataframe.apply(lambda x :
-                    'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/ZRRzM7clGk6mIJ2RXzXOdA?deeplink_custom_path=' + \
-                    parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
-                    axis=1
-                )
-            elif self.catalog_id == '3089747424480784': # hmallBA
-                dataframe['link'] = dataframe.apply(lambda x :
-                    'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/KqyqArugBkWPx4ZvVQTJdg?deeplink_custom_path=' + \
-                    parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
-                    axis=1
-                )
+            # 증분업데이트시 'out of stock'의 누락데이터 채우기 *일반적인 경우가 되면 분리필요
+            if self.catalog_id in ['321875988705706', '517196555826417', '3089747424480784'] :
+                if  self.isUpdate == True : # 증분업데이트
+                    dataframe.loc[dataframe['availability']=='in stock', 'condition'] = 'new'
+                    dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = '-'
+
+                if self.catalog_id == '321875988705706': # hmall 전체상품
+                    dataframe['link'] = dataframe.apply(lambda x : # series에 quote 함수 써야해서 apply lambda로 돌림
+                        'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/nQjrNdGHjEu2SkLy7xJuVQ?deeplink_custom_path=' + \
+                        parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
+                        axis=1
+                    )
+                elif self.catalog_id == '517196555826417': # hmall 방송상품
+                    dataframe['link'] = dataframe.apply(lambda x :
+                        'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/ZRRzM7clGk6mIJ2RXzXOdA?deeplink_custom_path=' + \
+                        parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
+                        axis=1
+                    )
+                elif self.catalog_id == '3089747424480784': # hmallBA
+                    dataframe['link'] = dataframe.apply(lambda x :
+                        'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/KqyqArugBkWPx4ZvVQTJdg?deeplink_custom_path=' + \
+                        parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
+                        axis=1
+                    )
 
         return dataframe
 
