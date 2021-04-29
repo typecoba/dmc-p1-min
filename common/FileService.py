@@ -32,7 +32,8 @@ class FileService():
     
     def getInfo(self, filePath=None):
         if filePath==None :            
-            raise HTTPException(400, 'filePath is required')
+            # raise HTTPException(400, 'filePath is required')
+            return None
                 
         if 'http' in filePath : # url인경우
             # file path
@@ -41,7 +42,8 @@ class FileService():
                     fileInfo = f.info()
                     f.close()
             except HTTPError as e :                
-                raise HTTPException(400, f'url is not open at {filePath}' )
+                # raise HTTPException(400, f'url is not open at {filePath}' )
+                return None
             
 
             # str-> datetime -> timezone 적용 -> formatting
@@ -57,7 +59,8 @@ class FileService():
         else : # 파일인경우
             # file check
             if os.path.exists(filePath) == False:                 
-                raise HTTPException(400, f'file not found at {filePath}')
+                # raise HTTPException(400, f'file not found at {filePath}')
+                return None
 
             size = os.path.getsize(filePath) # 파일 크기
             mtime = os.path.getmtime(filePath)  # 수정시간

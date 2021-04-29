@@ -293,7 +293,7 @@ async def getScheduleConvertProcess():
 @router.get('/schedule/convertProcess/{catalog_id}')
 async def getScheduleConvertProcess(catalog_id):
     config = configRepository.findOne(catalog_id)
-    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
+    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload    
 
     # ep cron
     if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']): # cron check        

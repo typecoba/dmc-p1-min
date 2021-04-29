@@ -24,7 +24,7 @@ class Logger():
         
         config = {
             'version': 1,
-            'disable_existing_loggers': isRootLogger,
+            'disable_existing_loggers': False,
             'formatters': {
                 'minimum': {'format':'%(asctime)s %(message)s'},
                 'default': {'format':'%(asctime)s [%(name)s] %(levelname)s : %(message)s'}
