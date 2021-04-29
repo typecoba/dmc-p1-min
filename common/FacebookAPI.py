@@ -9,7 +9,7 @@ class FacebookAPI():
     prop = Properties()    
 
     def __init__(self):
-        pass
+        self.logger = Logger()
 
     def setLogger(self, logger=None):
         self.logger = logger
