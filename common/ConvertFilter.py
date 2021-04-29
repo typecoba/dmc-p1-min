@@ -126,7 +126,7 @@ class ConvertFilter():
             if self.catalog_id in ['321875988705706', '517196555826417', '3089747424480784'] :
                 if  self.isUpdate == True : # 증분업데이트
                     dataframe.loc[dataframe['availability']=='in stock', 'condition'] = 'new'
-                    dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = '-'
+                    dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = 'undefined'
 
                 if self.catalog_id == '321875988705706': # hmall 전체상품
                     dataframe['link'] = dataframe.apply(lambda x : # series에 quote 함수 써야해서 apply lambda로 돌림
