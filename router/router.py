@@ -7,6 +7,7 @@ from common.FacebookAPI import FacebookAPI
 from common.Utils import Utils
 from common.Properties import Properties
 from repository.ConfigRepository import ConfigRepository
+from repository.ProductRepository import ProductRepository
 from http import HTTPStatus
 from starlette.config import Config
 from starlette.responses import FileResponse
@@ -328,6 +329,12 @@ async def test_download():
     toPath = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv'
     print(toPath)
     await fileService.download(fromPath, toPath)
+
+@router.get('/test/loadProduct')
+async def test_loadProduct():
+    productRepository = ProductRepository()
+    product = productRepository.selectProduct(catalog_id='865294747216107',period=365)
+    print(len(product))
 
 @router.get('/test/ping')
 async def test_ping():    

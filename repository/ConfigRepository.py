@@ -10,11 +10,11 @@ class ConfigRepository():
     prop = None # properties 객체
     mongo = None # mongo client
 
-    # pixel crawl data
+    # config data
     def __init__(self):
         self.prop = Properties()
-        self.mongo = self.getClient(self.prop.getDBHost(), int(self.prop.getDBPort()))
-        self.configMongo = self.mongo[self.prop.getDBDatabase()][self.prop.getDBCollection()]
+        self.mongo = self.getClient(self.prop.getConfigDBHost(), int(self.prop.getConfigDBPort()))
+        self.configMongo = self.mongo[self.prop.getConfigDBDatabase()][self.prop.getConfigDBCollection()]
                 
 
     # connect
@@ -103,4 +103,4 @@ class ConfigRepository():
 
         # convert log
         logFileName = f'log_convert_{epName}.{dateMonth}.log' # 월별
-        config['log'] = {'fullPath': f'{self.prop.getLogPath()}/{logFileName}'}
+        config['log'] = {'fullPath': f'{self.prop.getConvertLogPath()}/{logFileName}'}

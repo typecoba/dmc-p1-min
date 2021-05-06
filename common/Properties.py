@@ -7,11 +7,17 @@ class Properties() :
     __server_port=''
     __server_domain='' # 파일접근 root 경로
 
-    # mongodb
-    __db_host=''
-    __db_port=''
-    __db_database=''
-    __db_collection=''
+    # config mongodb
+    __config_db_host=''
+    __config_db_port=''
+    __config_db_database=''
+    __config_db_collection=''
+
+    # pixel mongodb
+    __pixel_db_host=''
+    __pixel_db_port=''
+    __pixel_db_database=''
+    __pixel_db_collection=''
 
     # path
     __root=''
@@ -62,10 +68,15 @@ class Properties() :
         self.__server_host = prop(f'{self.SERVER_PREFIX}_server_host')
         self.__server_port = prop(f'{self.SERVER_PREFIX}_server_port')        
         #
-        self.__db_host = prop(f'{self.SERVER_PREFIX}_db_host')
-        self.__db_port = prop(f'{self.SERVER_PREFIX}_db_port')
-        self.__db_database = prop(f'{self.SERVER_PREFIX}_db_database_name')
-        self.__db_collection = prop(f'{self.SERVER_PREFIX}_db_collection_name')
+        self.__config_db_host = prop(f'{self.SERVER_PREFIX}_config_db_host')
+        self.__config_db_port = prop(f'{self.SERVER_PREFIX}_config_db_port')
+        self.__db_config_database = prop(f'{self.SERVER_PREFIX}_config_db_database_name')
+        self.__db_config_collection = prop(f'{self.SERVER_PREFIX}_config_db_collection_name')
+        #
+        self.__pixel_db_host = prop(f'{self.SERVER_PREFIX}_pixel_db_host')
+        self.__pixel_db_port = prop(f'{self.SERVER_PREFIX}_pixel_db_port')
+        self.__db_pixel_database = prop(f'{self.SERVER_PREFIX}_pixel_db_database_name')
+        self.__db_pixel_collection = prop(f'{self.SERVER_PREFIX}_pixel_db_collection_name')
         #
         self.__epPath =         rootPath + prop(f'{self.SERVER_PREFIX}_ep_path')
         self.__epBackupPath =   rootPath + prop(f'{self.SERVER_PREFIX}_ep_backup_path')
@@ -84,18 +95,30 @@ class Properties() :
     def getServerDomain(self):
         return self.__server_domain
 
-    def getDBHost(self):
-        return self.__db_host
+    def getConfigDBHost(self):
+        return self.__config_db_host
         
-    def getDBPort(self):
-        return self.__db_port
+    def getConfigDBPort(self):
+        return self.__config_db_port
     
-    def getDBDatabase(self):
-        return self.__db_database
+    def getConfigDBDatabase(self):
+        return self.__db_config_database
     
-    def getDBCollection(self):
-        return self.__db_collection
+    def getConfigDBCollection(self):
+        return self.__db_config_collection
     
+    def getPixelDBHost(self):
+        return self.__pixel_db_host
+        
+    def getPixelDBPort(self):
+        return self.__pixel_db_port
+    
+    def getPixelDBDatabase(self):
+        return self.__db_pixel_database
+    
+    def getPixelDBCollection(self):
+        return self.__db_pixel_collection
+
     def getEpPath(self):
         return self.__epPath
     
