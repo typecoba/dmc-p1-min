@@ -21,6 +21,7 @@ class ConvertFilter():
     def run(self, dataframe):
         # self.logger.info('Convert Filter : ' + str(self.config['filter']))
         self.result = dataframe # chunk data
+        # 순서가 내용에 영향 줄 수 있음
         self.result = self.commonFilter(self.result) # 공통 filter
         self.result = self.mediaFilter(self.result) # 매체별 공통 filter               
         self.result = self.customFilter(self.result) # 카탈로그별 filter
@@ -154,6 +155,7 @@ class ConvertFilter():
         if 'product_type' in dataframe :             
             # google_product_category 값 주는경우 변환
             # google_product_category 목록 - https://www.google.com/basepages/producttype/taxonomy-with-ids.ko-KR.txt
+            # facebook_product_category 목록 - https://www.facebook.com/micro_site/url/?click_from_context_menu=true&country=KR&destination=https%3A%2F%2Fwww.facebook.com%2Fproducts%2Fcategories%2Fko_KR.txt&event_type=click&last_nav_impression_id=0zON316vXR7GH7KpP&max_percent_page_viewed=67&max_viewport_height_px=914&max_viewport_width_px=1782&orig_http_referrer=https%3A%2F%2Fwww.google.com%2F&orig_request_uri=https%3A%2F%2Fwww.facebook.com%2Fbusiness%2Fhelp%2F526764014610932&primary_cmsid=526764014610932&primary_content_locale=ko_KR&region=apac&scrolled=true&session_id=2cCNFUzUS1y24Kwhg&site=fb4b&extra_data[view_type]=v3_initial_view&extra_data[site_section]=help&extra_data[placement]=%2Fbusiness%2Fhelp%2F526764014610932
             proot = os.getcwd().replace('\\','/') #프로젝트 루트
             productDF = pd.read_csv(f'{proot}/data/taxonomy-with-ids.ko-KR.txt', sep='-', lineterminator='\n', skiprows=1, names=['num', 'category'], dtype=str, encoding='utf-8')
             productDict = dict(zip(productDF['num'].str.strip(), productDF['category'])) # dict로 변환 [{'num':'category'}]            

@@ -9,9 +9,9 @@ custom logger 선언시 하나의 인스턴스에 handler를 계속 추가하게
 핸들러 처리 필요함
 '''
 class Logger():
-    # logger = None
-    # streamHandler = None
-    # fileHandler = None
+    logger = None
+    streamHandler = None
+    fileHandler = None
     
     def __init__(self, name=None, filePath=None):
         date = datetime.datetime.now().strftime('%Y%m%d')
@@ -70,5 +70,5 @@ class Logger():
         
 
     def info(self, msg=None):
-        print(msg)
-        # self.logger.info(msg)
+        # print(msg)
+        self.logger.info(msg)
