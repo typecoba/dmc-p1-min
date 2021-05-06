@@ -64,8 +64,8 @@ class ConvertFilter():
             # title 150자 이내
             dataframe['title'] = dataframe['title'].str[:100]
 
-            # product_type
-            dataframe['product_type'] = self.makeProductType(dataframe) # 
+            # google_product_category 변환
+            dataframe['google_product_category'] = self.makeProductType(dataframe)
 
             # 기본값
             if 'availability' not in dataframe :
@@ -152,14 +152,14 @@ class ConvertFilter():
 
     def makeProductType(self, dataframe):
         result = pd.Series()        
-        if 'product_type' in dataframe :             
+        if 'google_product_category' in dataframe :             
             # google_product_category 값 주는경우 변환
             # google_product_category 목록 - https://www.google.com/basepages/producttype/taxonomy-with-ids.ko-KR.txt
             # facebook_product_category 목록 - https://www.facebook.com/micro_site/url/?click_from_context_menu=true&country=KR&destination=https%3A%2F%2Fwww.facebook.com%2Fproducts%2Fcategories%2Fko_KR.txt&event_type=click&last_nav_impression_id=0zON316vXR7GH7KpP&max_percent_page_viewed=67&max_viewport_height_px=914&max_viewport_width_px=1782&orig_http_referrer=https%3A%2F%2Fwww.google.com%2F&orig_request_uri=https%3A%2F%2Fwww.facebook.com%2Fbusiness%2Fhelp%2F526764014610932&primary_cmsid=526764014610932&primary_content_locale=ko_KR&region=apac&scrolled=true&session_id=2cCNFUzUS1y24Kwhg&site=fb4b&extra_data[view_type]=v3_initial_view&extra_data[site_section]=help&extra_data[placement]=%2Fbusiness%2Fhelp%2F526764014610932
             proot = os.getcwd().replace('\\','/') #프로젝트 루트
             productDF = pd.read_csv(f'{proot}/data/taxonomy-with-ids.ko-KR.txt', sep='-', lineterminator='\n', skiprows=1, names=['num', 'category'], dtype=str, encoding='utf-8')
-            productDict = dict(zip(productDF['num'].str.strip(), productDF['category'])) # dict로 변환 [{'num':'category'}]            
-            result = dataframe['product_type'].map(productDict) # 값 치환
+            productDict = dict(zip(productDF['num'].str.strip(), productDF['category'].str.strip())) # dict로 변환 [{'num':'category'}]            
+            result = dataframe['google_product_category'].map(productDict) # 값 치환
 
         else : # 없는경우        
             # category_1~4 연결해서 입력
