@@ -64,8 +64,8 @@ class ConvertFilter():
             # title 150자 이내
             dataframe['title'] = dataframe['title'].str[:100]
 
-            # google_product_category 변환
-            dataframe['google_product_category'] = self.makeProductType(dataframe)
+            # google_product_category 값 변환
+            dataframe['product_type'] = self.makeProductType(dataframe)
 
             # 기본값
             if 'availability' not in dataframe :
