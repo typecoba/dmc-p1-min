@@ -62,14 +62,14 @@ class ConvertProcess():
             update_suffix = ''
                     
         # print(feedIdList)
-        # print(segmentIndexMap)        
-        
+        # print(segmentIndexMap)            
         epLoad = self.chunkLoad(
             chunkSize=500000,
             filePath=self.config[f'ep{update_suffix}']['fullPath'],
             seperator=self.config[f'ep{update_suffix}']['sep'],
-            encoding=self.config[f'ep{update_suffix}']['encoding']
-        )                            
+            encoding=self.config[f'ep{update_suffix}']['encoding'],
+            compression= 'infer' if self.config[f'ep{update_suffix}']['zipformat'] == '' else self.config[f'ep{update_suffix}']['zipformat']
+        )
 
         ## convert 진행
         totalCount=0
@@ -123,7 +123,7 @@ class ConvertProcess():
             self.fileService.zipped(feedPath, feedPath+".zip")            
             self.fileService.delete(feedPath)
             
-            if isUpload :
+            if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
                 await self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
 
@@ -139,17 +139,19 @@ class ConvertProcess():
         pass
 
     # ep데이터 로드
-    def chunkLoad(self, chunkSize=100000, filePath=None, seperator=None, encoding='utf-8') :
+    def chunkLoad(self, chunkSize=100000, filePath=None, seperator=None, encoding='utf-8', compression='infer') :
         ''' 
         chunksize 단위로 로드
         title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
         컬럼 정리를 위해 원본 컬럼 리스트를 세팅해 로드
         '''
+        
         # 원본 컬럼리스트
         columns = pd.read_csv(filePath,
                                 nrows=1, #한줄만 읽음
                                 sep=seperator, # 명시
                                 # lineterminator='\r',
+                                compression=compression,
                                 encoding=encoding)        
         columns = list(columns)
 
@@ -161,6 +163,7 @@ class ConvertProcess():
                             # converters={'id': lambda x: print(x)},
                             sep=seperator, # 명시
                             # lineterminator='\r',
+                            compression=compression,
                             error_bad_lines=False, # error skip
                             usecols=columns, # chunk에도 컬럼명 표기
                             encoding=encoding)

@@ -59,8 +59,9 @@ class ConfigRepository():
 
     # 파일저장 Path 생성
     def setPath(self, config=None):
-        epName = config['info']['name']
-        epFormat = config['ep']['format']
+        epName = config['info']['name']          
+        epFormat = config['ep']['format'] if config['ep']['zipformat'] == '' else config['ep']['zipformat'] # ep원본 format으로 떨어지게 함
+        media = config['info']['media'] # 매체
         dateDay = datetime.now().strftime('%Y%m%d')
         dateMonth = datetime.now().strftime('%Y%m')
 
@@ -73,26 +74,26 @@ class ConfigRepository():
 
         # catalog -> feed
         for catalog_id, catalogDict in config['catalog'].items():
-            feedPath = f'{self.prop.getFeedPath()}/{catalog_id}' # catalog_id 폴더
+            feedPath = f'{self.prop.getFeedPath()}/{media}/{catalog_id}' # catalog_id 폴더
             if self.prop.SERVER_PREFIX == 'local':
-                publicFeedPath = f'{self.prop.getFeedPath()}/{catalog_id}'
+                publicFeedPath = feedPath
             else :
-                publicFeedPath = f'{self.prop.getServerDomain()}/feed/{catalog_id}'
+                publicFeedPath = f'{self.prop.getServerDomain()}/feed/{media}/{catalog_id}' # 외부접근용 도메인 경로
             
-            feedAllFileName = f'feed_{catalog_id}_all.tsv'
-            feedAllUpdateFileName = f'feed_{catalog_id}_update_all.tsv'
-            
+            feedAllFileName = f'{media}_{catalog_id}_all.tsv'
+            feedAllUpdateFileName = f'{media}_{catalog_id}_update_all.tsv'            
             # 피드가 한개인경우엔 동일함..
             catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
             catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}'
+
             if 'ep_update' in config: # ep_update 있는경우
                 catalogDict['feed_all']['fullPath_update'] = f'{feedPath}/{feedAllUpdateFileName}'
                 catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}'
 
             # feed
             for feed_id, feed in catalogDict['feed'].items():
-                feedFileName = f'feed_{catalog_id}_{feed_id}.tsv'
-                feedUpdateFileName = f'feed_{catalog_id}_{feed_id}_update.tsv'
+                feedFileName = f'{media}_{catalog_id}_{feed_id}.tsv'
+                feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.tsv'
                 config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath' : f'{feedPath}/{feedFileName}'}
                 config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}' # 외부접근 Path (domain/path)
                 

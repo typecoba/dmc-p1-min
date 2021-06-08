@@ -122,7 +122,7 @@ class ConvertFilter():
 									'%26utm_source%3Dfacebook%26utm_medium%3Ddisplay_retargeting_mo%26utm_campaign%3Dios%26utm_term%3Ddynamic_1_210311%26adBridge%3D1%26appinstall%3D1'
 
             # hmall
-            # hmall 카테고리 제외건은 공통필터에서 적용 - config['filter']['exclude']['product_type']
+            # hmall 카테고리 제외건은 공통필터에서 적용 - config['filter']['exclude']['google_product_category']
             # 증분업데이트시 'out of stock'의 누락데이터 채우기 *일반적인 경우가 되면 분리필요
             if self.catalog_id in ['321875988705706', '517196555826417', '3089747424480784'] :
                 if  self.isUpdate == True : # 증분업데이트
@@ -148,7 +148,17 @@ class ConvertFilter():
                         axis=1
                     )
 
+
+        elif self.config['info']['media'] == 'google' :
+            # hnsmall 카탈로그 관리자에서 처리한내용중 GMC용으로만 처리
+            if self.catalog_id in ['1044961502323589'] :
+                utm = '?channel_code=21173&utm_source=Google_DynamicRetargeting_Inactive&utm_medium=DA&utm_campaign=Dynamic'
+                dataframe['link'] = 'http://m.hnsmall.com/goods/view/' + dataframe['id'] + utm
+                dataframe['mobile_android_app_link'] = 'android-app://com.hnsmall/hnsmallapp/m.hnsmall.com/goods/view/' + dataframe['id'] + utm                                                       
+
         return dataframe
+
+
 
     def makeProductType(self, dataframe):
         result = pd.Series()        
