@@ -241,9 +241,8 @@ async def getFeedUpload(catalog_id):
     config = configRepository.findOne(catalog_id)
     # feed별 업로드
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
-        if config['info']['media'] == 'facebook':
-            feedPublicPath = feed['publicPath']
-            await facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=False)
+        if config['info']['media'] == 'facebook':            
+            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['publicPath'], isUpdate=False)
 
     return ResponseModel(message='Facebook API upload complete')
 
@@ -255,9 +254,8 @@ async def getFeedUploadUpdate(catalog_id):
 
     # feed별 업데이트
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
-        if config['info']['media'] == 'facebook':
-            feedPublicPath = feed['publicPath']
-            await facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=True)
+        if config['info']['media'] == 'facebook':            
+            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['publicPath'], isUpdate=True)
     
     return ResponseModel(message='Facebook API upload (update only) complete')
 

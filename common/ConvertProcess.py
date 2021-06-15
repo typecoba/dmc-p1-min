@@ -125,7 +125,7 @@ class ConvertProcess():
             
             if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
-                await self.facebookAPI.upload(feed_id=feed_id, feed_url=f'{feedPublicPath}.zip', isUpdate=isUpdate) # api 업로드
+                await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
         self.fileService.zipped(feedAllPath, feedAllPath+".zip")
