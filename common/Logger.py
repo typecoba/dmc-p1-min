@@ -33,16 +33,16 @@ class Logger():
                 'console':{
                     'class':'logging.StreamHandler',
                     'formatter':'minimum',
-                    'level':'NOTSET',
+                    'level':'INFO',
                 },
                 'file_root': {
                     'class':'logging.FileHandler',
                     'filename':f'{prop.getLogPath()}/server_log.{date}.log', # root log path
                     'formatter':'default',
-                    'level':'NOTSET',
+                    'level':'INFO',
                 },
             },
-            'root':{'handlers':['console','file_root'],'level':'NOTSET'},
+            'root':{'handlers':['console','file_root'],'level':'INFO'},
         }
 
         # file_convert handler 동적생성
@@ -53,10 +53,10 @@ class Logger():
                 'class':'logging.FileHandler',
                 'filename':filePath,
                 'formatter':'default',
-                'level':'NOTSET'
+                'level':'INFO'
             }
             config['loggers']={
-                name:{'handlers':['file_convert'],'level':'NOTSET'}
+                name:{'handlers':['file_convert'],'level':'INFO'}
             }
 
         # config 

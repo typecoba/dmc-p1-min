@@ -84,22 +84,22 @@ class ConfigRepository():
             feedAllUpdateFileName = f'{media}_{catalog_id}_update_all.tsv'            
             # 피드가 한개인경우엔 동일함..
             catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
-            catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}'
+            catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}.zip'
 
             if 'ep_update' in config: # ep_update 있는경우
                 catalogDict['feed_all']['fullPath_update'] = f'{feedPath}/{feedAllUpdateFileName}'
-                catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}'
+                catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}.zip'
 
             # feed
             for feed_id, feed in catalogDict['feed'].items():
                 feedFileName = f'{media}_{catalog_id}_{feed_id}.tsv'
                 feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.tsv'
-                config['catalog'][catalog_id]['feed'][feed_id] = {'fullPath' : f'{feedPath}/{feedFileName}'}
-                config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}' # 외부접근 Path (domain/path)
+                config['catalog'][catalog_id]['feed'][feed_id]['fullPath'] = f'{feedPath}/{feedFileName}'
+                config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}.zip' # 외부접근 Path (domain/path)
                 
                 if 'ep_update' in config: # ep_update 있는경우
                     config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedUpdateFileName}'
-                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}' # 외부접근 Path (domain/path)
+                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}.zip' # 외부접근 Path (domain/path)
                     
 
         # convert log
