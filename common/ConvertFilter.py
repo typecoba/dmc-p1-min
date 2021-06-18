@@ -130,13 +130,14 @@ class ConvertFilter():
                     dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = 'undefined'
 
                 if self.catalog_id == '321875988705706': # hmall 전체상품
+                    dataframe = dataframe[dataframe['custom_label_0']!='DP'] # 제외값
                     dataframe['link'] = dataframe.apply(lambda x : # series에 quote 함수 써야해서 apply lambda로 돌림
                         'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/nQjrNdGHjEu2SkLy7xJuVQ?deeplink_custom_path=' + \
                         parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
                         axis=1
                     )
                 elif self.catalog_id == '517196555826417': # hmall 방송상품
-                    dataframe = dataframe[dataframe['custom_label_0']=='HSW'] # 상품구성 값 custom_label_0 (DP/ HSB/ HSW )
+                    dataframe = dataframe[dataframe['custom_label_0']=='HSB'] # 방송상품
                     dataframe['link'] = dataframe.apply(lambda x :
                         'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/ZRRzM7clGk6mIJ2RXzXOdA?deeplink_custom_path=' + \
                         parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
