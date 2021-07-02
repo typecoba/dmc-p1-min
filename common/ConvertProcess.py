@@ -120,16 +120,18 @@ class ConvertProcess():
             gc.collect()
 
             # 압축 / tsv 제거 / 업로드
-            self.fileService.zipped(feedPath, feedPath+".zip")            
-            self.fileService.delete(feedPath)
+            if self.config['info']['media'] != 'criteo' : 
+                self.fileService.zipped(feedPath, feedPath+".zip")            
+                self.fileService.delete(feedPath)                
             
             if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
                 await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdate=isUpdate) # api 업로드
 
         # all파일 압축 / 제거
-        self.fileService.zipped(feedAllPath, feedAllPath+".zip")
-        self.fileService.delete(feedAllPath)
+        if self.config['info']['media'] != 'criteo' :
+            self.fileService.zipped(feedAllPath, feedAllPath+".zip")
+            self.fileService.delete(feedAllPath)
     
         self.logger.info('==Feed Convert Process End==')
             

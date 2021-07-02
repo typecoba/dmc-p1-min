@@ -65,9 +65,11 @@ class ConfigRepository():
         dateDay = datetime.now().strftime('%Y%m%d')
         dateMonth = datetime.now().strftime('%Y%m')
         if media in ['facebook', 'google'] : # 페북(tsv,csv,xml), 구글(tsv,xml)  *ep 공유하기도 하기때문에 tsv로 통일            
-            feedFormat = 'tsv'            
-        elif media=='criteo' : # 크리테오 (csv,xml)
+            feedFormat = 'tsv'
+            zipFormat = '.zip'
+        elif media=='criteo' : # 크리테오 (csv,xml) *압축하지 않는다
             feedFormat = 'csv'
+            zipFormat = ''
  
         # ep
         epFileName = f'ep_{epName}.{epFormat}'
@@ -88,22 +90,22 @@ class ConfigRepository():
             feedAllUpdateFileName = f'{media}_{catalog_id}_update_all.{feedFormat}'
             # 피드가 한개인경우엔 동일함..
             catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
-            catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}.zip'
+            catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}{zipFormat}'
 
             if 'ep_update' in config: # ep_update 있는경우
                 catalogDict['feed_all']['fullPath_update'] = f'{feedPath}/{feedAllUpdateFileName}'
-                catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}.zip'
+                catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}{zipFormat}'
 
             # feed
             for feed_id, feed in catalogDict['feed'].items():
                 feedFileName = f'{media}_{catalog_id}_{feed_id}.{feedFormat}'
                 feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.{feedFormat}'
                 config['catalog'][catalog_id]['feed'][feed_id]['fullPath'] = f'{feedPath}/{feedFileName}'
-                config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}.zip' # 외부접근 Path (domain/path)
+                config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}{zipFormat}' # 외부접근 Path (domain/path)
                 
                 if 'ep_update' in config: # ep_update 있는경우
                     config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedUpdateFileName}'
-                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}.zip' # 외부접근 Path (domain/path)
+                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}{zipFormat}' # 외부접근 Path (domain/path)
                     
 
         # convert log
