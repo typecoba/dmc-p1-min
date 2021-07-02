@@ -64,7 +64,11 @@ class ConfigRepository():
         media = config['info']['media'] # 매체
         dateDay = datetime.now().strftime('%Y%m%d')
         dateMonth = datetime.now().strftime('%Y%m')
-
+        if media in ['facebook', 'google'] : # 페북(tsv,csv,xml), 구글(tsv,xml)  *ep 공유하기도 하기때문에 tsv로 통일            
+            feedFormat = 'tsv'            
+        elif media=='criteo' : # 크리테오 (csv,xml)
+            feedFormat = 'csv'
+ 
         # ep
         epFileName = f'ep_{epName}.{epFormat}'
         epFullPath = f'{self.prop.getEpPath()}/{epFileName}'
@@ -80,8 +84,8 @@ class ConfigRepository():
             else :
                 publicFeedPath = f'{self.prop.getServerDomain()}/feed/{media}/{catalog_id}' # 외부접근용 도메인 경로
             
-            feedAllFileName = f'{media}_{catalog_id}_all.tsv'
-            feedAllUpdateFileName = f'{media}_{catalog_id}_update_all.tsv'            
+            feedAllFileName = f'{media}_{catalog_id}_all.{feedFormat}'
+            feedAllUpdateFileName = f'{media}_{catalog_id}_update_all.{feedFormat}'
             # 피드가 한개인경우엔 동일함..
             catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
             catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}.zip'
@@ -92,8 +96,8 @@ class ConfigRepository():
 
             # feed
             for feed_id, feed in catalogDict['feed'].items():
-                feedFileName = f'{media}_{catalog_id}_{feed_id}.tsv'
-                feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.tsv'
+                feedFileName = f'{media}_{catalog_id}_{feed_id}.{feedFormat}'
+                feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.{feedFormat}'
                 config['catalog'][catalog_id]['feed'][feed_id]['fullPath'] = f'{feedPath}/{feedFileName}'
                 config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}.zip' # 외부접근 Path (domain/path)
                 

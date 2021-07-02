@@ -107,7 +107,7 @@ class ConvertProcess():
             feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
             
             # feed별 중복제거
-            feedDF = pd.read_csv(feedPath, sep='\t', encoding='utf-8', dtype=str) # dtype 명시
+            feedDF = pd.read_csv(feedPath, encoding='utf-8', dtype=str) # dtype 명시
             feedDF = feedDF.drop_duplicates(['id'], ignore_index=True)
             
             # feed_all 쓰기 (이어쓰기) (머천센터등 필요)
@@ -178,11 +178,10 @@ class ConvertProcess():
             header=True
         else:
             mode='a' # 이어쓰기
-            header=False
+            header=False    
 
         df.to_csv(feedPath, 
                     index=False, # 자체 인덱스제거
-                    sep='\t', 
                     mode=mode,
                     header=header, # 컬럼명 
                     encoding='utf-8')

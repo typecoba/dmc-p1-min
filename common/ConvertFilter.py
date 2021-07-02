@@ -57,26 +57,44 @@ class ConvertFilter():
         return dataframe
 
     
-    # 2. 매체별 filter
+    # 2. 매체별 피드사양 filter
     def mediaFilter(self, dataframe=None):
         
-        if self.config['info']['media'] == 'facebook' :
-            # title 150자 이내
-            dataframe['title'] = dataframe['title'].str[:100]
+        # 공통        
 
-            # google_product_category 값 변환
-            dataframe['product_type'] = self.makeProductType(dataframe)
+        # google_product_category 값 변환
+        dataframe['product_type'] = self.makeProductType(dataframe)
 
-            # 기본값
-            if 'availability' not in dataframe :
-                dataframe = dataframe.assign(availability='in stock')
-            if 'condition' not in dataframe : 
+        # facebook
+        # https://www.facebook.com/business/help/120325381656392?id=725943027795860
+        if self.config['info']['media'] == 'facebook' :            
+            dataframe['title'] = dataframe['title'].str[:150] # 필수
+
+            if 'condition' not in dataframe : # 필수
                 dataframe = dataframe.assign(condition='new')
-            if 'description' not in dataframe :
+            else : 
+                dataframe = dataframe.assign(condition=dataframe['condition'].replace({'|'.join(['신상품']):'new'})) # condition 값 치환
+
+            if 'availability' not in dataframe : # 필수
+                dataframe = dataframe.assign(availability='in stock')                        
+
+            if 'description' not in dataframe : # 필수
                 dataframe = dataframe.assign(description=dataframe['title'].str.lower()) # 내용 없으면 title로 채움
             else : 
                 dataframe = dataframe.assign(description=dataframe['description'].str.lower()) # 대문자로만 있으면 리젝되므로 소문자변환
+
+        # google
+        # https://support.google.com/merchants/answer/7052112?visit_id=637607880510744390-1548004461&rd=1
+        if self.config['info']['media'] == 'google' :
+            pass
+
+        # criteo
+        # https://support.criteo.com/s/article?article=207571095-Criteo-Product-Feed-specification&language=ko
+        if self.config['info']['media'] == 'criteo' :
+            pass
             
+
+                
         return dataframe
 
 
@@ -150,13 +168,24 @@ class ConvertFilter():
                         axis=1
                     )
 
+            # 미궁365
+            if self.catalog_id == '805092590204028' : 
+                dataframe['brand'] = dataframe['brand'].fillna('미궁365') # brand 빈값 채우기
 
-        elif self.config['info']['media'] == 'google' :
+
+        if self.config['info']['media'] == 'google' :
             # hnsmall 카탈로그 관리자에서 처리한내용중 GMC용으로만 처리
             if self.catalog_id in ['1044961502323589'] :
                 utm = '?channel_code=21173&utm_source=Google_DynamicRetargeting_Inactive&utm_medium=DA&utm_campaign=Dynamic'
                 dataframe['link'] = 'http://m.hnsmall.com/goods/view/' + dataframe['id'] + utm
-                dataframe['mobile_android_app_link'] = 'android-app://com.hnsmall/hnsmallapp/m.hnsmall.com/goods/view/' + dataframe['id'] + utm                                                       
+                dataframe['mobile_android_app_link'] = 'android-app://com.hnsmall/hnsmallapp/m.hnsmall.com/goods/view/' + dataframe['id'] + utm
+
+
+
+        if self.config['info']['media'] == 'criteo' :
+            # 미궁365
+            if self.catalog_id in 'migung365' : 
+                dataframe['brand'] = dataframe['brand'].fillna('미궁365') # brand 빈값 채우기
 
         return dataframe
 
@@ -175,13 +204,14 @@ class ConvertFilter():
 
         else : # 없는경우        
             # category_1~4 연결해서 입력
-            for i in range(4) : # 0-4
-                if f'category_{i+1}' in dataframe : 
+            for i in range(4) : # 0-3                
+                if f'category_{i+1}' in dataframe :                    
                     if result.size == 0 : 
-                        result = dataframe[f'category_{i+1}'].copy()
+                        result = dataframe[f'category_{i+1}'].copy()                        
                     else :   
-                        result = result.str.cat(dataframe[f'category_{i+1}'], sep='@') # @구분자로 연결
-                    dataframe = dataframe.drop(f'category_{i+1}', axis=1)
-
+                        result = result.str.cat(dataframe[f'category_{i+1}'], sep='@', na_rep='') # @구분자로 연결                    
+            result = result.replace(regex=r'@+$', value='') # 하위카테고리 없는경우 정리
+            # print(result)
+            
         return result    
         
