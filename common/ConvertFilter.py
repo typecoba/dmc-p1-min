@@ -190,6 +190,7 @@ class ConvertFilter():
                 android_app_link = 'ssg://execute/page_open/self?url=http://m.ssg.com/item/itemView.ssg?itemId='+ dataframe['id'] +'&gateYn=Y&mobilAppSvcNo=3'                
                 dataframe['display_ads_link'] = android_app_link
                 dataframe['price'] = dataframe['price'] + ' KRW'
+                dataframe['shipping'] = 'KR:::' +dataframe['shipping']+ ' KRW'
                 # condition값 치환은 GMC를 활용하는것으로 함
 
 
