@@ -72,9 +72,7 @@ class ConvertFilter():
 
             if 'condition' not in dataframe : # 필수
                 dataframe = dataframe.assign(condition='new')
-            else : 
-                dataframe = dataframe.assign(condition=dataframe['condition'].replace({'|'.join(['신상품']):'new'})) # condition 값 치환
-
+            
             if 'availability' not in dataframe : # 필수
                 dataframe = dataframe.assign(availability='in stock')                        
 
@@ -86,7 +84,14 @@ class ConvertFilter():
         # google
         # https://support.google.com/merchants/answer/7052112?visit_id=637607880510744390-1548004461&rd=1
         if self.config['info']['media'] == 'google' :
-            pass
+            if 'availability' not in dataframe : # 필수
+                dataframe = dataframe.assign(availability='in stock')
+
+            if 'description' not in dataframe : # 필수
+                dataframe = dataframe.assign(description=dataframe['title'].str.lower()) # 내용 없으면 title로 채움                
+
+            # if 'condition' not in dataframe : # 필수 (새제품인경우 선택)
+            #     dataframe = dataframe.assign(condition='new')
 
         # criteo
         # https://support.criteo.com/s/article?article=207571095-Criteo-Product-Feed-specification&language=ko
@@ -179,6 +184,13 @@ class ConvertFilter():
                 utm = '?channel_code=21173&utm_source=Google_DynamicRetargeting_Inactive&utm_medium=DA&utm_campaign=Dynamic'
                 dataframe['link'] = 'http://m.hnsmall.com/goods/view/' + dataframe['id'] + utm
                 dataframe['mobile_android_app_link'] = 'android-app://com.hnsmall/hnsmallapp/m.hnsmall.com/goods/view/' + dataframe['id'] + utm
+            
+            # ssg_aos
+            if self.catalog_id == '449637976' :
+                android_app_link = 'ssg://execute/page_open/self?url=http://m.ssg.com/item/itemView.ssg?itemId='+ dataframe['id'] +'&gateYn=Y&mobilAppSvcNo=3'                
+                dataframe['display_ads_link'] = android_app_link
+                dataframe['price'] = dataframe['price'] + ' KRW'
+                # condition값 치환은 GMC를 활용하는것으로 함
 
 
 
