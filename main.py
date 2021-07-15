@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from http import HTTPStatus as status
 from router import router
+from router import testRouter
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from middleware.ResponseMiddleware import ResponseMiddleware
 
@@ -28,6 +29,7 @@ app = FastAPI()
 
 # 라우터
 app.include_router(router.router)
+app.include_router(testRouter.router)
 
 # exception handler
 @app.exception_handler(StarletteHTTPException)#
@@ -44,4 +46,5 @@ if __name__ == '__main__':
                 host=prop.SERVER_API_HOST,
                 port=prop.getServerPort(), 
                 workers=prop.SERVER_API_WORKERS, 
-                reload=prop.SERVER_AUTO_RELOAD) # True if local else False
+                reload=prop.SERVER_AUTO_RELOAD
+                ) # True if local else False
