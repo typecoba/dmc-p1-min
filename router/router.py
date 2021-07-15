@@ -15,6 +15,7 @@ import time
 from datetime import datetime
 import os
 import asyncio
+import aiohttp
 import json
 import pycron
 import aiofiles
@@ -132,7 +133,7 @@ async def getDownload(catalog_id):
 @router.get('/ep/download/{catalog_id}/update')
 async def getDownloadUpdate(catalog_id): 
     try:    
-        return await fileService.getEpDownload(catalog_id=catalog_id, isUpdate=True)
+        return await fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=True)
     except Exception as e :
         raise e
     
@@ -146,7 +147,7 @@ async def getDownloadUpdate(catalog_id):
 
 # ep 변환(만) 단위테스트
 @router.get('/ep/convert2feed/{catalog_id}')
-async def getEpConvert2feed(catalog_id):        
+async def getEpConvert2feed(catalog_id):
     try:
         config = ConfigRepository().findOne(catalog_id)
     
@@ -179,7 +180,7 @@ async def getEpConvert2feed(catalog_id):
     
     try :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
-        await ConvertProcess(config).execute(catalog_id=catalog_id, isUpdate=True)
+        await ConvertProcess(config).execute(catalog_id=catalog_id, isUpdateEp=True)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
         return ResponseModel(message='convert complete')
 
@@ -242,7 +243,7 @@ async def getFeedUpload(catalog_id):
     # feed별 업로드
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
         if config['info']['media'] == 'facebook':            
-            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['publicPath'], isUpdate=False)
+            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['publicPath'], isUpdateEp=False)
 
     return ResponseModel(message='Facebook API upload complete')
 
@@ -255,86 +256,68 @@ async def getFeedUploadUpdate(catalog_id):
     # feed별 업데이트
     for feed_id, feed in config['catalog'][catalog_id]['feed'].items():
         if config['info']['media'] == 'facebook':            
-            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['publicPath'], isUpdate=True)
+            await facebookAPI.upload(feed_id=feed_id, feed_url=feed['publicPath'], isUpdateEp=True)
     
     return ResponseModel(message='Facebook API upload (update only) complete')
 
 
 
-# scheduled feed convert process
+# 스케줄 프로세스 카탈로그_id기준 실행 (테스트)
+# @router.get('/schedule/convertProcess/{catalog_id}')
+# async def getScheduleConvertProcess(catalog_id):
+#     config = configRepository.findOne(catalog_id)
+#     isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload    
+    
+#     await convertProcessExecute(config, False, isUpload)
+    
+#     return ResponseModel(content=f'{config["info"]["name"]} schedule process complete')
+
+
+
+### 
 # 10분마다 호출하여 cron 체크 후 실행
+# 1. 스케쥴 실행 (비동기 + 멀티프로세스)
 @router.get('/schedule/convertProcess')
 async def getScheduleConvertProcess():
     configs = configRepository.findAll()    
-    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
+    port = properties.getServerPort()
+    url = f'http://localhost:{port}/schedule/convertProcess_execute'
+    headers = {'Content-Type': 'application/json'}
+    scheduledConfigs = []
     
-    for config in configs: # config 전체
-        # print(config['info']['name'], config['ep']['cron'], config['ep']['cron']!='')
-        
-        # ep cron
-        if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']): # cron check        
-            convertProcess = ConvertProcess(config)
-            for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
-                print(catalogDict['name'], catalog_id)
-                await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=isUpload) # catalog_id 기준으로 실행
-
-        # ep_update cron
-        if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']): 
-            convertProcess = ConvertProcess(config)            
-            for catalog_id, catalogDict in config['catalog'].items() :
-                print(catalogDict['name'], catalog_id)
-                await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=isUpload)
-                        
-    return ResponseModel(content='schedule process complete')
+    # ep/ep_update 중 schedule에 해당하는것만 체크    
+    for config in configs :
+        if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']):
+            scheduledConfigs.append(config)
+        if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']):             
+            scheduledConfigs.append(config)
+    
+    # 코루틴 사용 for
+    # aiohttp 사용 내부 router 호출
+    futures = [asyncio.ensure_future( aiohttp_post(url, json=json.dumps(config), headers=headers) ) for config in scheduledConfigs]
+    
+    return ResponseModel(message=f'convertProcess in scheduled ({len(scheduledConfigs)})')
 
 
-# 스케줄 프로세스 카탈로그_id기준 실행 (테스트)
-@router.get('/schedule/convertProcess/{catalog_id}')
-async def getScheduleConvertProcess(catalog_id):
-    config = configRepository.findOne(catalog_id)
-    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload    
+### 
+# 2. 스케쥴에서 내부 router 호출해서 multiprocess로 실행
+# config 데이터 post로 받아 ep/ep_update 크론 확인하여 convert process 실행
+@router.post('/schedule/convertProcess_execute')
+async def postScheduleConvertProcess_execute(request: Request):
 
-    # ep cron
-    if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']): # cron check        
-        convertProcess = ConvertProcess(config)
-        for catalog_id, catalogDict in config['catalog'].items() : # catalog 전체
-            print(catalogDict['name'], catalog_id)
-            await convertProcess.execute(catalog_id=catalog_id, isUpdate=False, isUpload=isUpload) # catalog_id 기준으로 실행
-
-    # ep_update cron
-    if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']): 
-        convertProcess = ConvertProcess(config)            
-        for catalog_id, catalogDict in config['catalog'].items() :
-            print(catalogDict['name'], catalog_id)
-            await convertProcess.execute(catalog_id=catalog_id, isUpdate=True, isUpload=isUpload)
-
-    return ResponseModel(content=f'{config["info"]["name"]} schedule process complete')
+    # json -> dict
+    config = json.loads(await request.json()) # fastapi request 클래스 사용
+    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
+    isUpdateEp = False if (config['ep']['cron']!='') and pycron.is_now(config['ep']['cron']) else True # ep와 ep_update는 동시에 스케줄링 되지 않는다는 전제
+    
+    # convert process
+    convertProcess = ConvertProcess(config)            
+    for catalog_id, catalogDict in config['catalog'].items() :
+        await convertProcess.execute(catalog_id=catalog_id, isUpdateEp=isUpdateEp, isUpload=isUpload)
 
 
 
-@router.get('/test/apiupload')
-async def test_apiupload():
-    feed_id = '236164118048821'
-    # feed_url = 'http://api.dmcf1.com/feed/268046537186348/feed_268046537186348_2499714026735797.tsv.zip'
-    feed_url = 'http://api.dmcf1.com/feed/141118536454632/watermark_141118536454632.json.gz'
-    isUpdate = False
-    await facebookAPI.upload(feed_id, feed_url, isUpdate)
-    return ResponseModel()
-
-@router.get('/test/download')
-async def test_download():
-    fromPath = 'http://api.dmcf1.com/ep/ssg/ssg_facebookNoCkwhereEpAll.csv'
-    toPath = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv'
-    print(toPath)
-    await fileService.download(fromPath, toPath)
-
-@router.get('/test/loadProduct')
-async def test_loadProduct():
-    productRepository = ProductRepository()
-    product = productRepository.selectProduct(catalog_id='865294747216107',period=365)
-    print(len(product))
-
-@router.get('/test/ping')
-async def test_ping():    
-    ip = Utils.getIP()
-    return ResponseModel(message='ping ok', content=ip)
+async def aiohttp_post(url, data=None, json=None, headers=None) :
+    async with aiohttp.ClientSession() as session :
+        async with session.post(url=url, data=data, json=json, headers=headers) as response:
+            return await response.text()

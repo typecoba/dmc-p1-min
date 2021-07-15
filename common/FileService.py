@@ -95,16 +95,16 @@ class FileService():
     *** convert process 내부에서 연동되므로 exception을 함수 외부로 빼야하나?
 
     '''    
-    async def getEpDownload(self, catalog_id=None, isUpdate=False): # type = '' or 'update'
+    async def getEpDownload(self, catalog_id=None, isUpdateEp=False): # type = '' or 'update'
         configRepository = ConfigRepository()
         config = configRepository.findOne(catalog_id)
 
         try :            
             # ep / ep_update flag
-            epKey = 'ep_update' if isUpdate == True else 'ep'
+            epKey = 'ep_update' if isUpdateEp == True else 'ep'
 
             # ep_update 체크
-            if isUpdate == True and 'ep_update' not in config: 
+            if isUpdateEp == True and 'ep_update' not in config: 
                 return ResponseModel(message='ep_update not found in config', content='')
 
             # 원본/로컬파일 비교 체크

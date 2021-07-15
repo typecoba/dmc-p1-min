@@ -23,9 +23,9 @@ class ConvertProcess():
         '''
 
         # convert pipeline logger        
-        epName = config['info']['name']
+        self.epName = config['info']['name']
         logPath = config['log']['fullPath']
-        self.logger = Logger(name=f'log_{epName}', filePath=logPath) # logger self.__class__.__qualname__
+        self.logger = Logger(name=f'log_{self.epName}', filePath=logPath) # logger self.__class__.__qualname__
 
         self.config = config
         self.fileService = FileService() # 파일 매니저 클래스
@@ -36,17 +36,18 @@ class ConvertProcess():
 
 
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
-    # isUpdate : True인경우 ep저장 subfix, api upload시 플래그 전달
+    # isUpdateEp : True인경우 ep저장 subfix, api upload시 플래그 전달
     # isUpload : True인경우 api upload 실행
-    async def execute(self, catalog_id=None, isUpdate=False, isUpload=False):
+    async def execute(self, catalog_id=None, isUpdateEp=False, isUpload=False):
+        self.logger.info(f'=={self.epName} EP {catalog_id}==')
         self.logger.info('==Feed Convert Process Start==')
-        self.convertFilter = ConvertFilter(self.config, catalog_id, isUpdate) # 필터 클래스
+        self.convertFilter = ConvertFilter(self.config, catalog_id, isUpdateEp) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
         
         # [1. download]
         self.logger.info('[ 1.EP DOWNLOAD ]')
         try :
-            responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdate=isUpdate)            
+            responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=isUpdateEp)
             self.logger.info(responseModel.get())
         except Exception as e :            
             self.logger.info(str(e)) # 여기에서 exception이 제대로 찍혀야함
@@ -56,7 +57,7 @@ class ConvertProcess():
         self.logger.info('[ 2.CONVERT - filtering ]')
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
         segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
-        if isUpdate : 
+        if isUpdateEp : 
             update_suffix = '_update'
         else:
             update_suffix = ''
@@ -64,7 +65,7 @@ class ConvertProcess():
         # print(feedIdList)
         # print(segmentIndexMap)            
         epLoad = self.chunkLoad(
-            chunkSize=500000,
+            chunkSize=1000000,
             filePath=self.config[f'ep{update_suffix}']['fullPath'],
             seperator=self.config[f'ep{update_suffix}']['sep'],
             encoding=self.config[f'ep{update_suffix}']['encoding'],
@@ -100,25 +101,26 @@ class ConvertProcess():
 
         # [3. upload] 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
         self.logger.info('[ 3.CONVERT - drop_duplicate/zip ]')      
+        
         feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
-
+        
         for i, feed_id in enumerate(feedIdList):            
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
             feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
-            
+                    
             # feed별 중복제거
             feedDF = pd.read_csv(feedPath, encoding='utf-8', dtype=str) # dtype 명시
             feedDF = feedDF.drop_duplicates(['id'], ignore_index=True)
             
             # feed_all 쓰기 (이어쓰기) (머천센터등 필요)
-            self.feedWrite(i, feedPath=feedAllPath, df=feedDF)
+            self.feedWrite(i, feedPath=feedAllPath, df=feedDF) # 제거
             # feed 쓰기 (새로쓰기)
-            self.feedWrite(feedPath=feedPath, df=feedDF)            
+            self.feedWrite(feedPath=feedPath, df=feedDF) 
 
             # memory clean
             del[[feedDF]]
             gc.collect()
-
+            
             # 압축 / tsv 제거 / 업로드
             if self.config['info']['media'] != 'criteo' : 
                 self.fileService.zipped(feedPath, feedPath+".zip")            
@@ -126,12 +128,14 @@ class ConvertProcess():
             
             if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
-                await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdate=isUpdate) # api 업로드
+                await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
 
         # all파일 압축 / 제거
+        
         if self.config['info']['media'] != 'criteo' :
             self.fileService.zipped(feedAllPath, feedAllPath+".zip")
             self.fileService.delete(feedAllPath)
+        
     
         self.logger.info('==Feed Convert Process End==')
             
