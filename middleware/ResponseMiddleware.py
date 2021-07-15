@@ -26,10 +26,10 @@ class ResponseMiddleware():
         starttime = time.time()
         # json string byte로 받아 dict로 변환
         response = await call_next(request) #response
-        content = b""
+        data = b""
         async for chunk in response.body_iterator:
-            content += chunk
-        content = json.loads(content.decode('utf-8')) # ResponseModel 형태
+            data += chunk
+        data = json.loads(data.decode('utf-8')) # ResponseModel 형태
         # end
         duration = format(time.time() - starttime, '0.3f')
                         
@@ -42,9 +42,9 @@ class ResponseMiddleware():
         }
 
         # 내용추가
-        if content != None : 
-            responseDict['message'] = content['message']
-            responseDict['content'] = content['content']
+        if data != None : 
+            responseDict['message'] = data['message'] if 'message' in data else None
+            responseDict['content'] = data['content'] if 'content' in data else None
 
         logger.info(f'**Response {responseDict}') # response.status_code
         
