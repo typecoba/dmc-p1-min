@@ -5,11 +5,11 @@ import os
 
 class ConvertFilter():
 
-    def __init__(self, config=None, catalog_id=None, isUpdate=None):
+    def __init__(self, config=None, catalog_id=None, isUpdateEp=None):
         pd.options.mode.chained_assignment = None # pandas warning 관련 알림 제거
         self.config = config        
         self.catalog_id = catalog_id
-        self.isUpdate = isUpdate
+        self.isUpdateEp = isUpdateEp
         self.result = pd.DataFrame()        
         self.logger = None
 
@@ -148,7 +148,7 @@ class ConvertFilter():
             # hmall 카테고리 제외건은 공통필터에서 적용 - config['filter']['exclude']['google_product_category']
             # 증분업데이트시 'out of stock'의 누락데이터 채우기 *일반적인 경우가 되면 분리필요
             if self.catalog_id in ['321875988705706', '517196555826417', '3089747424480784'] :
-                if  self.isUpdate == True : # 증분업데이트
+                if  self.isUpdateEp == True : # 증분업데이트
                     dataframe.loc[dataframe['availability']=='in stock', 'condition'] = 'new'
                     dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = 'undefined'
 
