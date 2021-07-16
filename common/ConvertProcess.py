@@ -65,7 +65,7 @@ class ConvertProcess():
         # print(feedIdList)
         # print(segmentIndexMap)            
         epLoad = self.chunkLoad(
-            chunkSize=1000000,
+            chunkSize=500000,
             filePath=self.config[f'ep{update_suffix}']['fullPath'],
             seperator=self.config[f'ep{update_suffix}']['sep'],
             encoding=self.config[f'ep{update_suffix}']['encoding'],
@@ -186,9 +186,15 @@ class ConvertProcess():
             mode='a' # 이어쓰기
             header=False    
 
+        if feedPath.endswith('.csv') :
+            sep = ','
+        elif feedPath.endswith('.tsv') :
+            sep = '\t'
+
         df.to_csv(feedPath, 
                     index=False, # 자체 인덱스제거
                     mode=mode,
+                    sep=sep,
                     header=header, # 컬럼명 
                     encoding='utf-8')
 

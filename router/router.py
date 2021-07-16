@@ -318,6 +318,6 @@ async def postScheduleConvertProcess_execute(request: Request):
 
 
 async def aiohttp_post(url, data=None, json=None, headers=None) :
-    async with aiohttp.ClientSession() as session :
+    async with aiohttp.ClientSession(timeout=0) as session : # timeout 0
         async with session.post(url=url, data=data, json=json, headers=headers) as response:
             return await response.text()
