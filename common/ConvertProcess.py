@@ -51,7 +51,6 @@ class ConvertProcess():
             self.logger.info(responseModel.get())
         except Exception as e :            
             self.logger.info(str(e)) # 여기에서 exception이 제대로 찍혀야함
-    
 
         # [2. convert]
         self.logger.info('[ 2.CONVERT - filtering ]')
@@ -64,6 +63,7 @@ class ConvertProcess():
                     
         # print(feedIdList)
         # print(segmentIndexMap)            
+        
         epLoad = self.chunkLoad(
             chunkSize=500000,
             filePath=self.config[f'ep{update_suffix}']['fullPath'],
@@ -71,7 +71,7 @@ class ConvertProcess():
             encoding=self.config[f'ep{update_suffix}']['encoding'],
             compression= 'infer' if self.config[f'ep{update_suffix}']['zipformat'] == '' else self.config[f'ep{update_suffix}']['zipformat']
         )
-
+        
         ## convert 진행
         totalCount=0
         for num, chunkDF in enumerate(epLoad): # chunk load
@@ -86,7 +86,8 @@ class ConvertProcess():
                 feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
 
                 # print(segmentDF['id'][:5])
-                self.feedWrite(num, feedPath=feedPath, df=segmentDF)
+                mode = 'w' if i==0 else 'a'
+                self.feedWrite(mode=mode, feedPath=feedPath, df=segmentDF)
             
             # log
             totalCount = totalCount + chunkDF.shape[0]
@@ -103,39 +104,64 @@ class ConvertProcess():
         self.logger.info('[ 3.CONVERT - drop_duplicate/zip ]')      
         
         feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
+
         
         for i, feed_id in enumerate(feedIdList):            
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
+            feedPath_temp = feedPath.replace('.tsv',  '_temp.tsv')
             feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
-                    
-            # feed별 중복제거
-            feedDF = pd.read_csv(feedPath, encoding='utf-8', dtype=str) # dtype 명시
-            feedDF = feedDF.drop_duplicates(['id'], ignore_index=True)
-            
-            # feed_all 쓰기 (이어쓰기) (머천센터등 필요)
-            self.feedWrite(i, feedPath=feedAllPath, df=feedDF) # 제거
-            # feed 쓰기 (새로쓰기)
-            self.feedWrite(feedPath=feedPath, df=feedDF) 
+            if '.tsv' in feedPath :
+                sep = '\t'
+            elif '.csv' in feedPath :
+                sep = ','
+
+            # print(feedPath)
+            # print(feedPath_temp)
+            # print(feedPublicPath)
+
+            # chunk로 중복제거
+            feedDF = pd.read_csv(feedPath, encoding='utf-8', sep=sep, dtype=str) # dtype 명시
+            mask = ~feedDF.duplicated(subset=['id'], keep='first')
+
+            if i==1 : break
+            chunkSize = 500000
+            chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath, seperator=sep, encoding='utf-8')
+            for j, df in enumerate(chunkIter) :
+                # index for mask
+                df.index = range(j*chunkSize, j*chunkSize + len(df.index))
+
+                # feed_all 쓰기 (첫번째 피드 첫번째 행 이후 이어쓰기) (머천센터등 필요)
+                mode = 'w' if (i==0 and j==0) else 'a'
+                self.feedWrite(mode=mode, feedPath=feedAllPath, df=df[mask]) # 제거
+                
+                # feed 쓰기 (피드별 새로쓰기)
+                mode = 'w' if j==0 else 'a'
+                self.feedWrite(mode=mode, feedPath=feedPath_temp, df=df[mask])
+
+                # memory clean
+                del[[df]]
+                gc.collect()
 
             # memory clean
-            del[[feedDF]]
+            del[[mask]]
             gc.collect()
+
             
             # 압축 / tsv 제거 / 업로드
             if self.config['info']['media'] != 'criteo' : 
-                self.fileService.zipped(feedPath, feedPath+".zip")            
-                self.fileService.delete(feedPath)                
+                self.fileService.zipped(feedPath_temp, feedPath+".zip")            
+                # self.fileService.delete(feedPath)         
             
             if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
                 await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
-
+            
         # all파일 압축 / 제거
         
         if self.config['info']['media'] != 'criteo' :
             self.fileService.zipped(feedAllPath, feedAllPath+".zip")
-            self.fileService.delete(feedAllPath)
-        
+            # self.fileService.delete(feedAllPath)
+            pass
     
         self.logger.info('==Feed Convert Process End==')
             
@@ -177,14 +203,12 @@ class ConvertProcess():
     
 
     #
-    def feedWrite(self, num=0, feedPath=None, df=None):
+    def feedWrite(self, mode='w', feedPath=None, df=None):
         os.makedirs(os.path.dirname(feedPath), exist_ok=True) # 경로확인/생성
-        if num == 0:
-            mode='w' # 새로쓰기
+        if mode == 'w': # 새로쓰기
             header=True
-        else:
-            mode='a' # 이어쓰기
-            header=False    
+        elif mode == 'a': # 이어쓰기
+            header=False
 
         if feedPath.endswith('.csv') :
             sep = ','
