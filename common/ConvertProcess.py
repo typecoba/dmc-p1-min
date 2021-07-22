@@ -108,7 +108,7 @@ class ConvertProcess():
         
         for i, feed_id in enumerate(feedIdList):            
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
-            feedPath_temp = feedPath.replace('.tsv',  '_temp.tsv')
+            feedPath_temp = feedPath.replace('.',  '_temp.')
             feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
             if '.tsv' in feedPath :
                 sep = '\t'
