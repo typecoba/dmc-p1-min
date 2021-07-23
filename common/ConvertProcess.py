@@ -74,13 +74,13 @@ class ConvertProcess():
         
         ## convert 진행
         totalCount=0
-        for num, chunkDF in enumerate(epLoad): # chunk load
+        for i, chunkDF in enumerate(epLoad): # chunk load
             # filter
             chunkDF = self.convertFilter.run(chunkDF)
 
             # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
-            for i, feed_id in enumerate(feedIdList):
-                segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[i])] # id끝자리 i
+            for j, feed_id in enumerate(feedIdList):
+                segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[j])] # id끝자리 j
                 
                 # write                
                 feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
@@ -120,25 +120,25 @@ class ConvertProcess():
             # print(feedPublicPath)
 
             # chunk로 중복제거
-            feedDF = pd.read_csv(feedPath, encoding='utf-8', sep=sep, dtype=str) # dtype 명시
+            feedDF = pd.read_csv(feedPath, usecols=['id'], encoding='utf-8', sep=sep, dtype=str) # dtype 명시
             mask = ~feedDF.duplicated(subset=['id'], keep='first')
 
             chunkSize = 500000
             chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath, seperator=sep, encoding='utf-8')
-            for j, df in enumerate(chunkIter) :
+            for j, chunkDF in enumerate(chunkIter) :
                 # index for mask
-                df.index = range(j*chunkSize, j*chunkSize + len(df.index))
+                chunkDF.index = range(j*chunkSize, j*chunkSize + len(chunkDF.index))
 
                 # feed_all 쓰기 (첫번째 피드 첫번째 행 이후 이어쓰기) (머천센터등 필요)
                 mode = 'w' if (i==0 and j==0) else 'a'
-                self.feedWrite(mode=mode, feedPath=feedAllPath, df=df[mask]) # 제거
+                self.feedWrite(mode=mode, feedPath=feedAllPath, df=chunkDF[mask]) # 제거
                 
                 # feed 쓰기 (피드별 새로쓰기)
                 mode = 'w' if j==0 else 'a'
-                self.feedWrite(mode=mode, feedPath=feedPath_temp, df=df[mask])
+                self.feedWrite(mode=mode, feedPath=feedPath_temp, df=chunkDF[mask])
 
                 # memory clean
-                del[[df]]
+                del[[chunkDF]]
                 gc.collect()
 
             # memory clean
