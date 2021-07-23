@@ -123,7 +123,6 @@ class ConvertProcess():
             feedDF = pd.read_csv(feedPath, encoding='utf-8', sep=sep, dtype=str) # dtype 명시
             mask = ~feedDF.duplicated(subset=['id'], keep='first')
 
-            if i==1 : break
             chunkSize = 500000
             chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath, seperator=sep, encoding='utf-8')
             for j, df in enumerate(chunkIter) :
