@@ -153,7 +153,7 @@ class ConvertFilter():
                     dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = 'undefined'
 
                 if self.catalog_id == '321875988705706': # hmall 전체상품
-                    dataframe = dataframe[dataframe['custom_label_0']!='DP'] # 제외값
+                    # dataframe = dataframe[dataframe['custom_label_0']!='DP'] # 제외값 (21.07.27 제거)
                     dataframe['link'] = dataframe.apply(lambda x : # series에 quote 함수 써야해서 apply lambda로 돌림
                         'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/nQjrNdGHjEu2SkLy7xJuVQ?deeplink_custom_path=' + \
                         parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
