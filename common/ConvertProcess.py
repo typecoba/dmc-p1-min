@@ -38,16 +38,15 @@ class ConvertProcess():
     # download -> epLoad -> filter -> segment -> feedWrite -> feedUpload
     # isUpdateEp : True인경우 ep저장 subfix, api upload시 플래그 전달
     # isUpload : True인경우 api upload 실행
-    async def execute(self, catalog_id=None, isUpdateEp=False, isUpload=False):
-        self.logger.info(f'=={self.epName} EP {catalog_id}==')
-        self.logger.info('==Feed Convert Process Start==')
+    def execute(self, catalog_id=None, isUpdateEp=False, isUpload=False):        
+        self.logger.info(f'==Convert Execute Start {self.epName} {catalog_id}==')
         self.convertFilter = ConvertFilter(self.config, catalog_id, isUpdateEp) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
         
         # [1. download]
         self.logger.info('[ 1.EP DOWNLOAD ]')
         try :
-            responseModel = await self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=isUpdateEp)
+            responseModel = self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=isUpdateEp)
             self.logger.info(responseModel.get())
         except Exception as e :            
             self.logger.info(str(e)) # 여기에서 exception이 제대로 찍혀야함
@@ -84,9 +83,10 @@ class ConvertProcess():
                 
                 # write                
                 feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
+                feedPath = feedPath.replace('.',  '_temp.') # 중복제거 전 임시
 
                 # print(segmentDF['id'][:5])
-                mode = 'w' if i==0 else 'a'
+                mode = 'w' if i==0 else 'a' # 피드별 파일쓰기
                 self.feedWrite(mode=mode, feedPath=feedPath, df=segmentDF)
             
             # log
@@ -108,7 +108,7 @@ class ConvertProcess():
         
         for i, feed_id in enumerate(feedIdList):            
             feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
-            feedPath_temp = feedPath.replace('.',  '_temp.')
+            feedPath_temp = feedPath.replace('.',  '_temp.') # temp파일
             feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
             if '.tsv' in feedPath :
                 sep = '\t'
@@ -119,30 +119,30 @@ class ConvertProcess():
             # print(feedPath_temp)
             # print(feedPublicPath)
 
-            # chunk로 중복제거
-            feedDF = pd.read_csv(feedPath, usecols=['id'], encoding='utf-8', sep=sep, dtype=str) # dtype 명시
-            mask = ~feedDF.duplicated(subset=['id'], keep='first')
-
+            # 중복제거
+            feedIdDF = pd.read_csv(feedPath_temp, usecols=['id'], encoding='utf-8', sep=sep, dtype=str) # dtype 명시            
+            mask = ~feedIdDF.duplicated(subset=['id'], keep='first') # id컬럼기준 masking 생성            
+            
             chunkSize = 500000
-            chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath, seperator=sep, encoding='utf-8')
+            chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath_temp, seperator=sep, encoding='utf-8')
             for j, chunkDF in enumerate(chunkIter) :
                 # index for mask
-                chunkDF.index = range(j*chunkSize, j*chunkSize + len(chunkDF.index))
+                chunkDF.index = mask[j*chunkSize : j*chunkSize + len(chunkDF.index)]                
 
                 # feed_all 쓰기 (첫번째 피드 첫번째 행 이후 이어쓰기) (머천센터등 필요)
                 mode = 'w' if (i==0 and j==0) else 'a'
-                self.feedWrite(mode=mode, feedPath=feedAllPath, df=chunkDF[mask]) # 제거
+                self.feedWrite(mode=mode, feedPath=feedAllPath, df=chunkDF.loc[True]) # 제거
                 
                 # feed 쓰기 (피드별 새로쓰기)
                 mode = 'w' if j==0 else 'a'
-                self.feedWrite(mode=mode, feedPath=feedPath_temp, df=chunkDF[mask])
+                self.feedWrite(mode=mode, feedPath=feedPath, df=chunkDF.loc[True])
 
                 # memory clean
                 del[[chunkDF]]
                 gc.collect()
-
+            
             # memory clean
-            del[[mask]]
+            del[[feedIdDF, mask]]
             gc.collect()
 
             
@@ -153,16 +153,15 @@ class ConvertProcess():
             
             if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
-                await self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
+                self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
             
         # all파일 압축 / 제거
-        
-        if self.config['info']['media'] != 'criteo' :
+        if self.config['info']['media'] != 'criteo' : # 크리테오는 압축안함
             self.fileService.zipped(feedAllPath, feedAllPath+".zip")
             # self.fileService.delete(feedAllPath)
             pass
     
-        self.logger.info('==Feed Convert Process End==')
+        self.logger.info(f'==Convert Execute End {self.epName} {catalog_id}==')
             
 
     # pixel데이터 다운로드 (to ep)

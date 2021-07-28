@@ -95,7 +95,7 @@ class FileService():
     *** convert process 내부에서 연동되므로 exception을 함수 외부로 빼야하나?
 
     '''    
-    async def getEpDownload(self, catalog_id=None, isUpdateEp=False): # type = '' or 'update'
+    def getEpDownload(self, catalog_id=None, isUpdateEp=False): # type = '' or 'update'
         configRepository = ConfigRepository()
         config = configRepository.findOne(catalog_id)
 
@@ -123,13 +123,14 @@ class FileService():
             if config[epKey]['status'] == Properties.STATUS_DOWNLOADING :                
                 return ResponseModel(message='already start download')
             
-            # 다운로드 
+            # 다운로드
             # 더 상세한 정보 logging 필요        
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':Properties.STATUS_DOWNLOADING}})
             if 'http' in config[epKey]['url'] : # web
-                result = await self.download(config[epKey]['url'], config[epKey]['fullPath'])
+                result = self.download(config[epKey]['url'], config[epKey]['fullPath'])
+
             else : # local
-                result = await self.copy(config[epKey]['url'], config[epKey]['fullPath'])
+                result = self.copy(config[epKey]['url'], config[epKey]['fullPath'])                
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':'', f'{epKey}.moddate':Utils.nowtime()}})
             
             # 파일백업
@@ -141,15 +142,9 @@ class FileService():
             raise e            
         
         
-        
-        
-                
-        
-
-
 
     # aiohttp
-    async def download(self, fromUrl, toPath):
+    async def download_async(self, fromUrl, toPath):
         os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
         connector = aiohttp.TCPConnector(verify_ssl=False) # connector 인증서무시 명시
         async with aiohttp.ClientSession(connector=connector) as session: 
@@ -169,15 +164,15 @@ class FileService():
 
 
     # urllib.request
-    def download_temp(self, fromUrl, toPath):
+    def download(self, fromUrl, toPath):
         os.makedirs(os.path.dirname(toPath), exist_ok=True)        
         request.urlretrieve(fromUrl, toPath)
         result = self.getInfo(toPath)
         return result
 
         
-    # copy        
-    async def copy(self, fromPath, toPath):
+    # aiofiles        
+    async def copy_async(self, fromPath, toPath):
         os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
         chunk_size = 1024*1024*10 # 10MB
         async with aiofiles.open(fromPath, 'rb') as fromFile:
@@ -190,6 +185,11 @@ class FileService():
                 result = self.getInfo(toPath)
                 self.logger.info('Copy ' + str(result))
                 return result
+
+    # shutil
+    def copy(self, fromPath, toPath) : 
+        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
+        shutil.copy(fromPath, toPath)
 
 
     def zipped(self, fromPath, toPath):
