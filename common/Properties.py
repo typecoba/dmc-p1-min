@@ -36,7 +36,7 @@ class Properties() :
     STATUS_CONVERTING = 'CONVERTING'
     SERVER_AUTO_RELOAD = False # 개발환경 자동리로드
     SERVER_API_HOST = '0.0.0.0' # uvicorn 실행 host
-    SERVER_API_WORKERS = 12
+    SERVER_API_WORKERS = 6 # uvicorn 서버 멀티프로세스 수
     SERVER_PREFIX = 'local' # prod / dev / local
     
 
