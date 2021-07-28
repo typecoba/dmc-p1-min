@@ -8,6 +8,10 @@ import requests
 from common.ResponseModel import ResponseModel
 import asyncio
 import aiohttp
+from multiprocessing import Process, Queue
+from common.ConvertProcess import ConvertProcess
+import pycron
+from random import randrange
 
 router = APIRouter()
 configRepository = ConfigRepository()
@@ -85,4 +89,24 @@ async def test_multifunc(i=0):
     print(f'end {i}')    
     # ResponseModel(message='', content='do')
 
+
+# 멀티프로세스 test2
+@router.get('/test/multiprocessfor2')
+async def test_multiprocessFor2() :    
+    for i in range(20) :                 
+        Process(target=test_multifunc3, args=(i,)).start()        
+        print(f'process_{i} start')
+    return ResponseModel()
+
+
+def test_multifunc3(num) :
+    result = 0
+    rand = randrange(10000000)
+    if num < 10 :
+        numstr = f'0{num}'
+    else :
+        numstr = str(num)
     
+    for i, val in enumerate(range(rand)) : 
+        result = result + i
+    print(f'process {numstr} end : result = {result}')
