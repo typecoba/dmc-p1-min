@@ -36,6 +36,6 @@ class FacebookAPI():
         params ={'update_only': update_only ,'access_token': self.prop.getFacebookAccessToken(), 'url': feed_url}
 
         self.logger.info('Upload '+str({'api_url':api_url, 'params':params}))
-        response = requests.get(url=api_url, params=params)
+        response = requests.post(url=api_url, data=params)
         self.logger.info('Result '+response.text)
         return response.text
