@@ -157,7 +157,7 @@ async def getEpConvert2feed(catalog_id):
             raise HTTPException(status_code=400, detail=f'convert already started at {config["info"]["moddate"]}...')
             
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING, 'info.moddate':Utils.nowtime()}})
-        await ConvertProcess(config).execute(catalog_id=catalog_id)
+        ConvertProcess(config).execute(catalog_id=catalog_id)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':'', 'info.moddate':Utils.nowtime()}})
         return ResponseModel(message='convert complete')
 
@@ -181,7 +181,7 @@ async def getEpConvert2feed(catalog_id):
     
     try :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
-        await ConvertProcess(config).execute(catalog_id=catalog_id, isUpdateEp=True)
+        ConvertProcess(config).execute(catalog_id=catalog_id, isUpdateEp=True)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
         return ResponseModel(message='convert complete')
 

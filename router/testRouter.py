@@ -31,7 +31,7 @@ async def test_apiupload():
     # feed_url = 'http://api.dmcf1.com/feed/268046537186348/feed_268046537186348_2499714026735797.tsv.zip'
     feed_url = 'http://api.dmcf1.com/feed/141118536454632/watermark_141118536454632.json.gz'
     isUpdateEp = False
-    await facebookAPI.upload(feed_id, feed_url, isUpdateEp)
+    facebookAPI.upload(feed_id, feed_url, isUpdateEp)
     return ResponseModel()
 
 @router.get('/test/download')
@@ -39,7 +39,7 @@ async def test_download():
     fromPath = 'http://api.dmcf1.com/ep/ssg/ssg_facebookNoCkwhereEpAll.csv'
     toPath = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_change_min/data/ep/ep_ssg_facebook.csv'
     print(toPath)
-    await fileService.download(fromPath, toPath)
+    fileService.download(fromPath, toPath)
 
 @router.get('/test/loadProduct')
 async def test_loadProduct():
