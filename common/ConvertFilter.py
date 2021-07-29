@@ -176,6 +176,8 @@ class ConvertFilter():
             # 미궁365
             if self.catalog_id == '805092590204028' : 
                 dataframe['brand'] = dataframe['brand'].fillna('미궁365') # brand 빈값 채우기
+                dataframe.loc[dataframe['condition']=='새상품', 'condition'] = 'new'
+
 
 
         if self.config['info']['media'] == 'google' :
@@ -199,6 +201,7 @@ class ConvertFilter():
             # 미궁365
             if self.catalog_id in 'migung365' : 
                 dataframe['brand'] = dataframe['brand'].fillna('미궁365') # brand 빈값 채우기
+                dataframe.loc[dataframe['condition']=='새상품', 'condition'] = 'new'
 
         return dataframe
 
