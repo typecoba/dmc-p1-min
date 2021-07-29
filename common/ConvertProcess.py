@@ -82,12 +82,12 @@ class ConvertProcess():
                 segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[j])] # id끝자리 j
                 
                 # write                
-                feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
-                feedPath = feedPath.replace('.',  '_temp.') # 중복제거 전 임시
+                feedPath_temp = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
+                feedPath_temp = feedPath_temp.replace('.',  '_temp.') # 중복제거 전 임시
 
                 # print(segmentDF['id'][:5])
                 mode = 'w' if i==0 else 'a' # 피드별 파일쓰기
-                self.feedWrite(mode=mode, feedPath=feedPath, df=segmentDF)
+                self.feedWrite(mode=mode, feedPath=feedPath_temp, df=segmentDF)
             
             # log
             totalCount = totalCount + chunkDF.shape[0]
@@ -107,9 +107,9 @@ class ConvertProcess():
 
         
         for i, feed_id in enumerate(feedIdList):            
-            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
-            feedPath_temp = feedPath.replace('.',  '_temp.') # temp파일
-            feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
+            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 중복제거 후 최종
+            feedPath_temp = feedPath.replace('.',  '_temp.') # 중복제거 전 임시
+            feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}'] # ftp공개 주소
             if '.tsv' in feedPath :
                 sep = '\t'
             elif '.csv' in feedPath :
@@ -148,8 +148,8 @@ class ConvertProcess():
             
             # 압축 / tsv 제거 / 업로드
             if self.config['info']['media'] != 'criteo' : 
-                self.fileService.zipped(feedPath_temp, feedPath+".zip")            
-                # self.fileService.delete(feedPath)         
+                self.fileService.zipped(feedPath, feedPath+".zip")            
+                # self.fileService.delete(feedPath)       
             
             if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
                 self.logger.info('[ 4.UPLOAD ]')
