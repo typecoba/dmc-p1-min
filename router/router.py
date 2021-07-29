@@ -275,15 +275,21 @@ async def getScheduleConvertProcess() :
     configs = configRepository.findAll()
     isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
     
-    # config 단위 멀티스레드    
+    # config 단위 멀티스레드
+    processList = [] 
     for config in configs :
         if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']):
             isUpdateEp = False
-            Process(target=convertProcessExecute, args=(config, isUpdateEp, isUpload)).start()
+            processList.append( Process(target=convertProcessExecute, args=(config, isUpdateEp, isUpload)))
         
         if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']):             
             isUpdateEp = True
-            Process(target=convertProcessExecute, args=(config, isUpdateEp, isUpload)).start()        
+            processList.append( Process(target=convertProcessExecute, args=(config, isUpdateEp, isUpload)))
+
+    for process in processList :
+        process.start()
+
+    return ResponseModel(message=f'convertProcess count ({len(processList)})')        
 
 
 def convertProcessExecute(config, isUpdateEp, isUpload) :    
