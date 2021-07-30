@@ -167,6 +167,7 @@ class ConvertFilter():
                         axis=1
                     )
                 elif self.catalog_id == '3089747424480784': # hmallBA
+                    dataframe = dataframe[dataframe['custom_label_0']=='HSB'] # 방송상품 (21.07.30 추가)
                     dataframe['link'] = dataframe.apply(lambda x :
                         'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/KqyqArugBkWPx4ZvVQTJdg?deeplink_custom_path=' + \
                         parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
