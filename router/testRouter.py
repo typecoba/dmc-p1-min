@@ -93,9 +93,16 @@ async def test_multifunc(i=0):
 # 멀티프로세스 test2
 @router.get('/test/multiprocessfor2')
 async def test_multiprocessFor2() :    
-    for i in range(20) :                 
-        Process(target=test_multifunc3, args=(i,)).start()        
+    for i in range(5) :                 
+        locals()[f'p_{i}'] = Process(target=test_multifunc3, args=(i,))
+        locals()[f'p_{i}'].start() # 동시실행
         print(f'process_{i} start')
+
+    # join 으로 종료 기다려줌
+    for i in range(5) : 
+        locals()[f'p_{i}'].join()
+    
+
     return ResponseModel()
 
 
