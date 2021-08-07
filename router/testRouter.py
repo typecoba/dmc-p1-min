@@ -12,6 +12,7 @@ from multiprocessing import Process, Queue
 from common.ConvertProcess import ConvertProcess
 import pycron
 from random import randrange
+import boto3
 
 router = APIRouter()
 configRepository = ConfigRepository()
@@ -117,3 +118,24 @@ def test_multifunc3(num) :
     for i, val in enumerate(range(rand)) : 
         result = result + i
     print(f'process {numstr} end : result = {result}')
+
+
+@router.get('/test/s3_upload')
+async def test_s3Upload() :
+    s3Client = boto3.client('s3', 
+                            aws_access_key_id = properties.getAwsS3AccessKeyId(),
+                            aws_secret_access_key = properties.getAwsS3SecretAccessKey(),
+                            region_name = properties.getAwsS3Region())
+    file_path = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_convert_min/data/ep/ep_Hmall.csv'
+    s3_file_path = 'catalog/feedconvert-min/test_upload.tsv'
+
+    try :
+        response = s3Client.upload_file(file_path, properties.getAwsS3Bucket(), s3_file_path)
+        public_url = f'https://{properties.getAwsS3Bucket()}.s3.{properties.getAwsS3Region()}.amazonaws.com/{s3_file_path}'
+        print(public_url)
+    except Exception as e :        
+        response = e
+
+    print(response)
+
+    return ResponseModel()

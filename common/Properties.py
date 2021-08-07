@@ -28,8 +28,14 @@ class Properties() :
     __logPath=''
     __convertLogPath=''
 
-    # access token
+    # facebook api access token
     __facebookAccessToken=''
+
+    # aws s3 key
+    __aws_s3_access_key_id = ''
+    __aws_s3_secret_access_key = ''
+    __aws_s3_region = ''
+    __aws_s3_bucket = ''
 
     # 상수
     STATUS_DOWNLOADING = 'DOWNLOADING'
@@ -45,7 +51,13 @@ class Properties() :
     '''
     def __init__(self):    
         prop = Config('property.env')        
+        # facebook api key
         self.__facebookAccessToken = prop('facebook_api_access_token')
+        # aws s3 key
+        self.__aws_s3_access_key_id = prop('aws_s3_access_key_id')
+        self.__aws_s3_secret_access_key = prop('aws_s3_secret_access_key')
+        self.__aws_s3_region = prop('aws_s3_region')
+        self.__aws_s3_bucket = prop('aws_s3_bucket')
 
         # ip check
         ip = Utils.getIP()
@@ -84,7 +96,8 @@ class Properties() :
         self.__feedBackupPath = rootPath + prop(f'{self.SERVER_PREFIX}_feed_backup_path')
         self.__logPath =        rootPath + prop(f'{self.SERVER_PREFIX}_log_path') # 프로젝트 root
         self.__convertLogPath = rootPath + prop(f'{self.SERVER_PREFIX}_convert_log_path') # 프로젝트 root
-    
+
+
     
     def getServerHost(self):
         return self.__server_host
@@ -139,3 +152,15 @@ class Properties() :
     
     def getFacebookAccessToken(self):
         return self.__facebookAccessToken
+    
+    def getAwsS3AccessKeyId(self):
+        return self.__aws_s3_access_key_id
+    
+    def getAwsS3SecretAccessKey(self):
+        return self.__aws_s3_secret_access_key
+    
+    def getAwsS3Region(self):
+        return self.__aws_s3_region
+
+    def getAwsS3Bucket(self):
+        return self.__aws_s3_bucket
