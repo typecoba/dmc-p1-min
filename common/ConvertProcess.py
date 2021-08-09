@@ -9,6 +9,8 @@ from common.FacebookAPI import FacebookAPI
 from common.Properties import Properties
 import requests
 import csv
+from multiprocessing import Process, Queue, Pool
+import numpy as np
 
 '''
 execute 단위로 비동기 코루틴 생성
@@ -54,7 +56,12 @@ class ConvertProcess():
         # [2. convert]
         self.logger.info('[ 2.CONVERT - filtering ]')
         feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
-        segmentIndexMap = self.getSegmentIndexMap(len(feedIdList)) # [[0, 1],[2, 3], [4, 5], [6, 7], [8, 9]]
+
+        # 0~9 배열 균등분배 후 list출력
+        indexMap = list(map(str,range(10))) # ['0','1','2','3','4','5','6','7','8','9']
+        segmentIndexMap = [list(data) for data in np.array_split(indexMap, len(feedIdList))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]
+        # print(segmentIndexMap)
+        
         if isUpdateEp : 
             update_suffix = '_update'
         else:
@@ -73,7 +80,7 @@ class ConvertProcess():
         
         ## convert 진행
         totalCount=0
-        for i, chunkDF in enumerate(epLoad): # chunk load
+        for i, chunkDF in enumerate(epLoad): # chunk load            
             # filter
             chunkDF = self.convertFilter.run(chunkDF)
 
@@ -91,7 +98,7 @@ class ConvertProcess():
             
             # log
             totalCount = totalCount + chunkDF.shape[0]
-            self.logger.info(f'..{format(totalCount,",")} row processed')            
+            self.logger.info(f'..{format(totalCount,",")} row processed')
 
             # memory clean
             del[[chunkDF]]
@@ -101,68 +108,82 @@ class ConvertProcess():
         
 
         # [3. upload] 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
-        self.logger.info('[ 3.CONVERT - drop_duplicate/zip ]')      
+        self.logger.info('[ 3.CONVERT - drop_duplicate/zip ]')
         
-        feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
-
+        # feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
         
-        for i, feed_id in enumerate(feedIdList):            
-            feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 중복제거 후 최종
-            feedPath_temp = feedPath.replace('.',  '_temp.') # 중복제거 전 임시
-            feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}'] # ftp공개 주소
-            if '.tsv' in feedPath :
-                sep = '\t'
-            elif '.csv' in feedPath :
-                sep = ','
+        # pool 사용하여 동시처리
+        pool = Pool( min(5, len(feedIdList)) ) # 분할된 feed 갯수기준 최대 5개
+        args = []
+        for i, feed_id in enumerate(feedIdList):
+            args.append((catalog_id, feed_id, update_suffix, isUpdateEp, isUpload))
 
-            # print(feedPath)
-            # print(feedPath_temp)
-            # print(feedPublicPath)
+        # print(args)
+        pool.starmap(self.dropDuplicateFeed, args)
+        pool.close()
+        pool.join()
 
-            # 중복제거
-            feedIdDF = pd.read_csv(feedPath_temp, usecols=['id'], encoding='utf-8', sep=sep, dtype=str) # dtype 명시            
-            mask = ~feedIdDF.duplicated(subset=['id'], keep='first') # id컬럼기준 masking 생성            
-            
-            chunkSize = 500000
-            chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath_temp, seperator=sep, encoding='utf-8')
-            for j, chunkDF in enumerate(chunkIter) :
-                # index for mask
-                chunkDF.index = mask[j*chunkSize : j*chunkSize + len(chunkDF.index)]                
-
-                # feed_all 쓰기 (첫번째 피드 첫번째 행 이후 이어쓰기) (머천센터등 필요)
-                mode = 'w' if (i==0 and j==0) else 'a'
-                self.feedWrite(mode=mode, feedPath=feedAllPath, df=chunkDF.loc[True]) # 제거
-                
-                # feed 쓰기 (피드별 새로쓰기)
-                mode = 'w' if j==0 else 'a'
-                self.feedWrite(mode=mode, feedPath=feedPath, df=chunkDF.loc[True])
-
-                # memory clean
-                del[[chunkDF]]
-                gc.collect()
-            
-            # memory clean
-            del[[feedIdDF, mask]]
-            gc.collect()
-
-            
-            # 압축 / tsv 제거 / 업로드
-            if self.config['info']['media'] != 'criteo' : 
-                self.fileService.zipped(feedPath, feedPath+".zip")            
-                # self.fileService.delete(feedPath)       
-            
-            if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
-                self.logger.info('[ 4.UPLOAD ]')
-                self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
-            
+                                    
         # all파일 압축 / 제거
-        if self.config['info']['media'] != 'criteo' : # 크리테오는 압축안함
-            self.fileService.zipped(feedAllPath, feedAllPath+".zip")
+        # if self.config['info']['media'] != 'criteo' : # 크리테오는 압축안함
+        #     self.fileService.zipped(feedAllPath, feedAllPath+".zip")
             # self.fileService.delete(feedAllPath)
-            pass
+            # pass
     
         self.logger.info(f'==Convert Execute End {self.epName} {catalog_id}==')
             
+
+    # 피드별 중복제거
+    def dropDuplicateFeed(self, catalog_id, feed_id, update_suffix, isUpdateEp, isUpload):        
+        feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 중복제거 후 최종
+        feedPath_temp = feedPath.replace('.',  '_temp.') # 중복제거 전 임시
+        feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}'] # ftp공개 주소
+        if '.tsv' in feedPath :
+            sep = '\t'
+        elif '.csv' in feedPath :
+            sep = ','
+
+        # print(feedPath)
+        # print(feedPath_temp)
+        # print(feedPublicPath)
+
+        # 중복제거
+        feedIdDF = pd.read_csv(feedPath_temp, usecols=['id'], encoding='utf-8', sep=sep, dtype=str) # dtype 명시            
+        mask = ~feedIdDF.duplicated(subset=['id'], keep='first') # id컬럼기준 masking 생성            
+        
+        chunkSize = 500000
+        chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath_temp, seperator=sep, encoding='utf-8')
+        for j, chunkDF in enumerate(chunkIter) :
+            # index for mask
+            chunkDF.index = mask[j*chunkSize : j*chunkSize + len(chunkDF.index)]                
+
+            # feed_all 쓰기 (첫번째 피드 첫번째 행 이후 이어쓰기) (머천센터등 필요)
+            # mode = 'w' if (i==0 and j==0) else 'a'
+            # self.feedWrite(mode=mode, feedPath=feedAllPath, df=chunkDF.loc[True]) # 제거
+            
+            # feed 쓰기 (피드별 새로쓰기)
+            mode = 'w' if j==0 else 'a'
+            self.feedWrite(mode=mode, feedPath=feedPath, df=chunkDF.loc[True])
+
+            # memory clean
+            del[[chunkDF]]
+            gc.collect()
+        
+        # memory clean
+        del[[feedIdDF, mask]]
+        gc.collect()
+        
+        # 압축 / tsv 제거 / 업로드
+        if self.config['info']['media'] != 'criteo' : 
+            self.fileService.zipped(feedPath, feedPath+".zip")            
+            # self.fileService.delete(feedPath)
+            # self.fileService.delete(feedPath_temp)
+        
+        if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
+            self.logger.info('[ 4.UPLOAD ]')
+            self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
+
+
 
     # pixel데이터 다운로드 (to ep)
     def pixelDataDownLoad(self):
@@ -175,15 +196,9 @@ class ConvertProcess():
         title에 구분자포함되어 에러나는경우 skip.. 원본ep 문제
         컬럼 정리를 위해 원본 컬럼 리스트를 세팅해 로드
         '''
-        
         # 원본 컬럼리스트
-        columns = pd.read_csv(filePath,
-                                nrows=1, #한줄만 읽음
-                                sep=seperator, # 명시
-                                # lineterminator='\r',
-                                compression=compression,
-                                encoding=encoding)        
-        columns = list(columns)
+        columns = list(self.config['columns'].keys()) # 필요컬럼만 
+        # print(columns)
 
         result = pd.read_csv(filePath,
                             nrows=None,
@@ -219,24 +234,3 @@ class ConvertProcess():
                     sep=sep,
                     header=header, # 컬럼명 
                     encoding='utf-8')
-
-
-    '''
-    id끝자리기준 0-9를 피드갯수에 대해 분포시키기위한 index map 생성
-    직관적/1,2,3,4,5,10으로만 분할
-    '''
-    def getSegmentIndexMap(self, feedCount=1): 
-        result = []
-        if feedCount==1:
-            result = [['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']]
-        elif feedCount==2:
-            result = [['0', '1', '2', '3', '4'],['5', '6', '7', '8', '9']]
-        elif feedCount==3:
-            result = [['0','1','2'],['3','4','5'],['6','7','8','9']]
-        elif feedCount==4:
-            result = [['0','1'],['2','3'],['4','5','6'],['7','8','9']]
-        elif feedCount==5:
-            result = [['0', '1'],['2', '3'],['4', '5'],['6', '7'],['8', '9']]
-        elif feedCount==10:
-            result = [['0'], ['1'], ['2'], ['3'], ['4'], ['5'], ['6'], ['7'], ['8'], ['9']]
-        return result
