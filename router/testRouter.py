@@ -8,11 +8,13 @@ import requests
 from common.ResponseModel import ResponseModel
 import asyncio
 import aiohttp
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pool, Manager, cpu_count
 from common.ConvertProcess import ConvertProcess
 import pycron
 from random import randrange
 import boto3
+import os
+import time
 
 router = APIRouter()
 configRepository = ConfigRepository()
@@ -119,6 +121,24 @@ def test_multifunc3(num) :
         result = result + i
     print(f'process {numstr} end : result = {result}')
 
+@router.get('/test/multiprocess-pool')
+async def test_multipool():
+    from itertools import product
+
+    print(f'cpu {cpu_count()}')
+    pool = Pool(processes=3)
+    input = [(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),(8,8),(9,9),(10,10)]
+    result = pool.starmap(square, input) # 인자 여러개 넣을라면 starmap 
+    print(result)
+
+    pool.close()
+    pool.join()
+
+def square(a:int, b:int):
+    time.sleep(1)
+    print(f'함수 {input} 에대한 작업 pid = {os.getpid()}')
+    print('--'*10)
+    return a*b
 
 @router.get('/test/s3_upload')
 async def test_s3Upload() :
