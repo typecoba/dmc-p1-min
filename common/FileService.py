@@ -1,5 +1,6 @@
 from urllib import request
 from urllib.error import URLError, HTTPError
+import requests
 import os
 from datetime import datetime, timedelta
 from dateutil import parser
@@ -20,6 +21,8 @@ import zipfile
 from pytz import timezone
 import json
 import boto3
+from tqdm import tqdm
+import math
 
 
 
@@ -164,12 +167,29 @@ class FileService():
                     return result
 
 
-    # urllib.request
-    def download(self, fromUrl, toPath):
-        os.makedirs(os.path.dirname(toPath), exist_ok=True)        
-        request.urlretrieve(fromUrl, toPath)
-        result = self.getInfo(toPath)
-        return result
+    # requests
+    def download(self, fromUrl:str, toPath:str):
+        # 경로생성
+        os.makedirs(os.path.dirname(toPath), exist_ok=True)
+
+        with requests.get(fromUrl, stream=True) as response :
+            response.raise_for_status()
+            with open(toPath, 'wb') as file :
+                # 프로그래스바
+                total_size = int(response.headers['Content-Length'])                
+                chunk_size = min(math.ceil(total_size/2), 1024*10*10)
+                progress_bar = tqdm(total=total_size, position=0, leave=True, mininterval=0, miniters=1)                
+
+                for chunk in response.iter_content(chunk_size=chunk_size) :
+                    # if chunk :
+                    file.write(chunk)
+                    progress_bar.update(len(chunk))
+                print('\n')
+                # 메모리비우기
+                # file.flush()
+                # os.fsync(file.fileno())
+        
+        return self.getInfo(toPath)
 
         
     # aiofiles        
