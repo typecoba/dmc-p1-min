@@ -12,7 +12,7 @@ from multiprocessing import Process, Queue, Pool, Manager, cpu_count
 from common.ConvertProcess import ConvertProcess
 import pycron
 from random import randrange
-import boto3
+# import boto3
 import os
 import time
 
@@ -140,22 +140,22 @@ def square(a:int, b:int):
     print('--'*10)
     return a*b
 
-@router.get('/test/s3_upload')
-async def test_s3Upload() :
-    s3Client = boto3.client('s3', 
-                            aws_access_key_id = properties.getAwsS3AccessKeyId(),
-                            aws_secret_access_key = properties.getAwsS3SecretAccessKey(),
-                            region_name = properties.getAwsS3Region())
-    file_path = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_convert_min/data/ep/ep_Hmall.csv'
-    s3_file_path = 'catalog/feedconvert-min/test_upload.tsv'
+# @router.get('/test/s3_upload')
+# async def test_s3Upload() :
+#     s3Client = boto3.client('s3', 
+#                             aws_access_key_id = properties.getAwsS3AccessKeyId(),
+#                             aws_secret_access_key = properties.getAwsS3SecretAccessKey(),
+#                             region_name = properties.getAwsS3Region())
+#     file_path = 'C:/Users/shsun/Documents/workspace/project/p1/f1_feed_convert_min/data/ep/ep_Hmall.csv'
+#     s3_file_path = 'catalog/feedconvert-min/test_upload.tsv'
 
-    try :
-        response = s3Client.upload_file(file_path, properties.getAwsS3Bucket(), s3_file_path)
-        public_url = f'https://{properties.getAwsS3Bucket()}.s3.{properties.getAwsS3Region()}.amazonaws.com/{s3_file_path}'
-        print(public_url)
-    except Exception as e :        
-        response = e
+#     try :
+#         response = s3Client.upload_file(file_path, properties.getAwsS3Bucket(), s3_file_path)
+#         public_url = f'https://{properties.getAwsS3Bucket()}.s3.{properties.getAwsS3Region()}.amazonaws.com/{s3_file_path}'
+#         print(public_url)
+#     except Exception as e :        
+#         response = e
 
-    print(response)
+#     print(response)
 
-    return ResponseModel()
+#     return ResponseModel()

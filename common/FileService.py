@@ -20,7 +20,7 @@ from repository.ConfigRepository import ConfigRepository
 import zipfile
 from pytz import timezone
 import json
-import boto3
+# import boto3
 from tqdm import tqdm
 import math
 
@@ -233,18 +233,18 @@ class FileService():
 
 
 
-    def s3_upload(self, file_path, key_path):
-        properties = Properties()
-        s3Client = boto3.client('s3', 
-            aws_access_key_id = properties.getAwsS3AccessKeyId(),
-            aws_secret_access_key = properties.getAwsS3SecretAccessKey(),
-            region_name = properties.getAwsS3Region())
+    # def s3_upload(self, file_path, key_path):
+    #     properties = Properties()
+    #     s3Client = boto3.client('s3', 
+    #         aws_access_key_id = properties.getAwsS3AccessKeyId(),
+    #         aws_secret_access_key = properties.getAwsS3SecretAccessKey(),
+    #         region_name = properties.getAwsS3Region())
 
-        try : 
-            s3Client.upload_file(file_path, properties.getAwsS3Bucket(), key_path)
-            s3_url = f'https://{properties.getAwsS3Bucket()}.s3.{properties.getAwsS3Region()}.amazonaws.com/{key_path}'
-            return s3_url
+    #     try : 
+    #         s3Client.upload_file(file_path, properties.getAwsS3Bucket(), key_path)
+    #         s3_url = f'https://{properties.getAwsS3Bucket()}.s3.{properties.getAwsS3Region()}.amazonaws.com/{key_path}'
+    #         return s3_url
 
-        except Exception as e :
-            self.logger.info(e)
-            return False
+    #     except Exception as e :
+    #         self.logger.info(e)
+    #         return False
