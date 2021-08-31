@@ -11,7 +11,7 @@ import requests
 import csv
 from multiprocessing import Process, Queue, Pool
 import numpy as np
-from tqdm import tqdm
+# from tqdm import tqdm
 
 '''
 execute 단위로 비동기 코루틴 생성

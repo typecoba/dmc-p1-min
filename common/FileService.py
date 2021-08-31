@@ -21,7 +21,7 @@ import zipfile
 from pytz import timezone
 import json
 # import boto3
-from tqdm import tqdm
+# from tqdm import tqdm
 import math
 
 
@@ -178,12 +178,12 @@ class FileService():
                 # 프로그래스바
                 total_size = int(response.headers['Content-Length'])                
                 chunk_size = min(math.ceil(total_size/2), 1024*10*10)
-                progress_bar = tqdm(total=total_size, position=0, leave=True, mininterval=0, miniters=1)                
+                # progress_bar = tqdm(total=total_size, position=0, leave=True, mininterval=0, miniters=1)                
 
                 for chunk in response.iter_content(chunk_size=chunk_size) :
                     # if chunk :
                     file.write(chunk)
-                    progress_bar.update(len(chunk))
+                    # progress_bar.update(len(chunk))
                 print('\n')
                 # 메모리비우기
                 # file.flush()
