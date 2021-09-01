@@ -148,88 +148,95 @@ class FileService():
         
 
     # aiohttp
-    async def download_async(self, fromUrl, toPath):
-        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
+    async def download_async(self, file_url:str, file_path:str):
+        os.makedirs(os.path.dirname(file_path), exist_ok=True) # 경로확인/생성
         connector = aiohttp.TCPConnector(verify_ssl=False) # connector 인증서무시 명시
         async with aiohttp.ClientSession(connector=connector) as session: 
-            async with session.get(fromUrl, timeout=None) as response:
+            async with session.get(file_url, timeout=None) as response:
 
                 chunk_size = 1024*1024*10 # 10MB
-                async with aiofiles.open(toPath, 'wb') as f:
+                async with aiofiles.open(file_path, 'wb') as f:
                     while True:
                         chunk = await response.content.read(chunk_size)
                         if not chunk : break
                         await f.write(chunk)
 
-                    result = self.getInfo(toPath)
-                    # self.logger.info('Download complete : ' + str(result))
+                    result = self.getInfo(file_path)
+                    self.logger.info('Download complete : ' + str(result))
                     response.close()
                     return result
 
 
     # requests
-    def download(self, fromUrl:str, toPath:str):
+    # 서버에서 에러남 확인필요
+    def download(self, file_url:str, file_path:str):
         # 경로생성
-        os.makedirs(os.path.dirname(toPath), exist_ok=True)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        with requests.get(fromUrl, stream=True) as response :
+        with requests.get(file_url, stream=True) as response :
             response.raise_for_status()
-            with open(toPath, 'wb') as file :
+            with open(file_path, 'wb') as file :
+                total_size = None
+                chunk_size = 1024*10*10
+
                 # 프로그래스바
-                total_size = int(response.headers['Content-Length'])                
-                chunk_size = min(math.ceil(total_size/2), 1024*10*10)
-                # progress_bar = tqdm(total=total_size, position=0, leave=True, mininterval=0, miniters=1)                
+                if 'Content-Length' in response.headers :
+                    total_size = int(response.headers['Content-Length'])
+                    # progress_bar = tqdm(total=total_size, position=0, leave=True, mininterval=0, miniters=1)
 
                 for chunk in response.iter_content(chunk_size=chunk_size) :
-                    # if chunk :
-                    file.write(chunk)
-                    # progress_bar.update(len(chunk))
+                    if chunk :
+                        file.write(chunk)
+                    # if total_size != None:
+                    #   progress_bar.update(len(chunk))
+                
                 print('\n')
+                
                 # 메모리비우기
-                # file.flush()
-                # os.fsync(file.fileno())
+                file.flush()
+                os.fsync(file.fileno())
         
-        return self.getInfo(toPath)
+        return self.getInfo(file_path)
 
         
     # aiofiles        
-    async def copy_async(self, fromPath, toPath):
-        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
+    async def copy_async(self, path_from:str, path_to:str):
+        os.makedirs(os.path.dirname(path_to), exist_ok=True) # 경로확인/생성
         chunk_size = 1024*1024*10 # 10MB
-        async with aiofiles.open(fromPath, 'rb') as fromFile:
-            async with aiofiles.open(toPath, 'wb') as toFile:
+        async with aiofiles.open(path_from, 'rb') as fromFile:
+            async with aiofiles.open(path_to, 'wb') as toFile:
                 while True:
                     chunk = await fromFile.read(chunk_size)
                     if not chunk : break
                     await toFile.write(chunk)
                 
-                result = self.getInfo(toPath)
+                result = self.getInfo(path_to)
                 self.logger.info('Copy ' + str(result))
                 return result
 
     # shutil
-    def copy(self, fromPath, toPath) : 
-        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성
-        shutil.copy(fromPath, toPath)
+    def copy(self, path_from:str, path_to:str) : 
+        os.makedirs(os.path.dirname(path_to), exist_ok=True) # 경로확인/생성
+        shutil.copy(path_from, path_to)
 
 
-    def zipped(self, fromPath, toPath):
-        os.makedirs(os.path.dirname(toPath), exist_ok=True) # 경로확인/생성    
-        zip = zipfile.ZipFile(toPath, 'w', zipfile.ZIP_DEFLATED)
-        zip.write(fromPath, arcname=os.path.basename(fromPath)) # 압축내용에 경로제거
-        self.logger.info('Zipped : '+ str(self.getInfo(toPath)))
+    def zipped(self, file_path:str, zip_path:str):
+        os.makedirs(os.path.dirname(zip_path), exist_ok=True) # 경로확인/생성    
+        zip = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
+        zip.write(file_path, arcname=os.path.basename(file_path)) # 압축내용에 경로제거
+        self.logger.info('Zipped : '+ str(self.getInfo(zip_path)))
 
         # 7일 이전 삭제 (db로 관리해야할듯)        
         # delPath = '{toPath}.{date}.zip'.format(toPath=toPath, date=(datetime.now() + timedelta(days=-keepDay)).strftime('%Y%m%d'))
         # if os.path.isfile(delPath):
         #     os.remove(delPath)
 
-    def delete(self, filePath):
-        if os.path.exists(filePath) == False: 
+    def delete(self, file_path:str):
+        if os.path.exists(file_path) == False: 
             raise HTTPException(status_code=400, detail='file not found')
         else:
-            os.remove(filePath)
-            self.logger.info('Delete : ' + filePath)
+            os.remove(file_path)
+            self.logger.info('Delete : ' + file_path)
 
 
 

@@ -38,7 +38,8 @@ class ConvertProcess():
 
         # 1. 원본 ep 다운로드
         self.logger.info('[ 1.EP DOWNLOAD ]')
-        self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=is_update)
+        response = self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=is_update)
+        self.logger.info(response.get())
         
         # 2. chunk로 읽어 피드 수 만큼 균등하게 분리 (대용량피드 상품수 제한 대응)
         self.logger.info('[ 2.Feed Segmentation ]')        
