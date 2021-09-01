@@ -38,22 +38,22 @@ class ConvertProcess():
 
         # 1. 원본 ep 다운로드
         self.logger.info('[ 1.EP DOWNLOAD ]')
-        # self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=is_update)
+        self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=is_update)
         
         # 2. chunk로 읽어 피드 수 만큼 균등하게 분리 (대용량피드 상품수 제한 대응)
         self.logger.info('[ 2.Feed Segmentation ]')        
         self.feed_segment(catalog_id, is_update)
         
         # 3. 멀티프로세스 처리 (분할된 피드별 중복제거 / 필터링 / 압축 / 업로드)
-        # self.logger.info('[ 3.Filtering / Zip / Upload ]')                
-        # feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
-        # pool = Pool( min(5, len(feed_ids)) ) # 분할된 feed 갯수기준 최대 5개
-        # args = []
-        # for i, feed_id in enumerate(feed_ids):
-        #     args.append((catalog_id, feed_id, is_update, is_upload)) # 매개변수 리스트        
-        # pool.starmap(self.feed_filtering_upload, args) # pool을 통해 실행
-        # pool.close()
-        # pool.join()
+        self.logger.info('[ 3.Filtering / Zip / Upload ]')                
+        feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
+        pool = Pool( min(5, len(feed_ids)) ) # 분할된 feed 갯수기준 최대 5개
+        args = []
+        for i, feed_id in enumerate(feed_ids):
+            args.append((catalog_id, feed_id, is_update, is_upload)) # 매개변수 리스트        
+        pool.starmap(self.feed_filtering_upload, args) # pool을 통해 실행
+        pool.close()
+        pool.join()
 
         self.logger.info(f'==Convert Execute End {self.config["info"]["name"]} {catalog_id}==')
     

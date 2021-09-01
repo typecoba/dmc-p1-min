@@ -181,7 +181,7 @@ async def getEpConvert2feed(catalog_id):
     
     try :
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':properties.STATUS_CONVERTING}})
-        ConvertProcess(config).execute(catalog_id=catalog_id, isUpdateEp=True)
+        ConvertProcess(config).execute(catalog_id=catalog_id, is_update=True)
         configRepository.updateOne({f'catalog.{catalog_id}' : {'$exists':True}}, {'$set':{'info.status':''}})
         return ResponseModel(message='convert complete')
 
@@ -273,19 +273,19 @@ async def getFeedUploadUpdate(catalog_id):
 @router.get('/schedule/convertProcess')
 async def getScheduleConvertProcess() :
     configs = configRepository.findAll()
-    isUpload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
+    is_upload = True if properties.SERVER_PREFIX == 'prod' else False # 운영서버일경우에만 api upload
     
     # config 단위 멀티스레드
     processList = []
     for config in configs :
         if ('ep' in config) and (config['ep']['cron'] != '') and pycron.is_now(config['ep']['cron']):
-            isUpdateEp = False            
-            processList.append( Process(target=convertProcessExecute, args=(config, isUpdateEp, isUpload)))
+            is_update = False
+            processList.append( Process(target=convertProcessExecute, args=(config, is_update, is_upload))) 
             processList[-1].start()
         
         if ('ep_update' in config) and (config['ep_update']['cron'] != '') and pycron.is_now(config['ep_update']['cron']):             
-            isUpdateEp = True
-            processList.append( Process(target=convertProcessExecute, args=(config, isUpdateEp, isUpload)))
+            is_update = True
+            processList.append( Process(target=convertProcessExecute, args=(config, is_update, is_upload)))
             processList[-1].start()
     
     for process in processList :
@@ -294,10 +294,10 @@ async def getScheduleConvertProcess() :
     return ResponseModel(message=f'convertProcess count ({len(processList)})')        
 
 
-def convertProcessExecute(config, isUpdateEp, isUpload) :    
+def convertProcessExecute(config, is_update, is_upload) :    
     convertProcess = ConvertProcess(config)
-    for catalog_id, catalogDict in config['catalog'].items() :
-        convertProcess.execute(catalog_id=catalog_id, isUpdateEp=isUpdateEp, isUpload=isUpload)
+    for key, value in config['catalog'].items() :
+        convertProcess.execute(catalog_id=key, is_update=is_update, is_upload=is_upload)
 
 
 
