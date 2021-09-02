@@ -167,13 +167,12 @@ class FileService():
                     return result
 
 
-    # requests
-    # 서버에서 에러남 확인필요
+    # requests    
     def download(self, file_url:str, file_path:str):
         # 경로생성
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        with requests.get(file_url, stream=True) as response :
+        with requests.get(file_url, stream=True, verify=False) as response :
             response.raise_for_status()
             with open(file_path, 'wb') as file :
                 total_size = None
