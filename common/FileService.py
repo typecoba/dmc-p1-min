@@ -171,8 +171,8 @@ class FileService():
     def download(self, file_url:str, file_path:str):
         # 경로생성
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-        with requests.get(file_url, stream=True, verify=False) as response :
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'} #chrome
+        with requests.get(file_url, headers=headers, stream=True, verify=False) as response :
             response.raise_for_status()
             with open(file_path, 'wb') as file :
                 total_size = None
