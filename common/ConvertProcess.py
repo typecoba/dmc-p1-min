@@ -48,7 +48,7 @@ class ConvertProcess():
         # 3. 멀티프로세스 처리 (분할된 피드별 중복제거 / 필터링 / 압축 / 업로드)
         self.logger.info('[ 3.Filtering / Zip / Upload ]')                
         feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
-        pool = Pool( min(3, len(feed_ids)) ) # 분할된 feed 갯수기준 최대 3개
+        pool = Pool( min(1, len(feed_ids)) ) # 분할된 feed 갯수기준 최대 1개
         args = []
         for i, feed_id in enumerate(feed_ids):
             args.append((catalog_id, feed_id, is_update, is_upload)) # 매개변수 리스트        
