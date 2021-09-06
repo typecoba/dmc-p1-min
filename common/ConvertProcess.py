@@ -109,6 +109,10 @@ class ConvertProcess():
             loaded_cnt = loaded_cnt + chunk_df.shape[0]
             self.logger.info(f'..{format(loaded_cnt,",")} row segmented')
 
+            # memory clean
+            del[[chunk_df]]
+            gc.collect()            
+
     
     
     def feed_filtering_upload(self, catalog_id:str, feed_id:str, is_update:bool=False, is_upload:bool=False):
@@ -158,7 +162,11 @@ class ConvertProcess():
             
             # feed 쓰기 (피드별 새로쓰기)
             mode = 'w' if j==0 else 'a'
-            self.feedWrite(mode=mode, feedPath=feed_path, df=chunk_df)            
+            self.feedWrite(mode=mode, feedPath=feed_path, df=chunk_df)
+
+            # memory clean
+            del[[chunk_df]]
+            gc.collect()            
                 
         
         # 압축 / tsv 제거 / 업로드
