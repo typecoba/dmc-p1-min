@@ -58,13 +58,23 @@ class ConvertProcess():
 
         self.logger.info(f'==Convert Execute End {self.config["info"]["name"]} {catalog_id}==')
     
-    
+    # 피드기준 id 균등분배, 매번 같은피드에 위치
+    # feed 최대10개 -> id끝자리 1자리수(0-9)
+    # feed 10개이상 -> id끝자리 2자리수(00-99)
+    # 최대 1억건 이상 피드고려 2자리수 분배
     def feed_segment(self, catalog_id:str=None, is_update:bool=False):
         #
         feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
-        # 0~9 배열 균등분배 후 list출력
-        index_map = list(map(str,range(10))) # ['0','1','2','3','4','5','6','7','8','9']
-        segment_index_map = [list(data) for data in np.array_split(index_map, len(feed_ids))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]        
+
+        # ['00'...'99']
+        index = []
+        for num in range(0,100):
+            if num < 10:
+                index.append('0'+str(num))
+            else : 
+                index.append(str(num))
+        
+        segment_index = [list(data) for data in np.array_split(index, len(feed_ids))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]        
         #
         update_suffix = '_update' if is_update == True else ''
         chunk_size = 500000
@@ -95,7 +105,7 @@ class ConvertProcess():
         for i, chunk_df in enumerate(ep_load): # chunk load
             # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
             for j, feed_id in enumerate(feed_ids):
-                segment_df = chunk_df[chunk_df['id'].str[-1:].isin(segment_index_map[j])] # id끝자리 j
+                segment_df = chunk_df[chunk_df['id'].str[-2:].isin(segment_index[j])] # id끝자리 2자리수 비교
                 
                 # write                
                 feed_path_temp = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']

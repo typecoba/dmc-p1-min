@@ -52,7 +52,7 @@ async def test_loadProduct():
 
 @router.get('/test/ping')
 async def test_ping():    
-    ip = Utils.getIP()
+    ip = Utils.get_ip()
     return ResponseModel(message='ping ok', content=ip)
 
 #### 코루틴 사용 for test

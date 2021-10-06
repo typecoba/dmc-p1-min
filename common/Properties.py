@@ -42,7 +42,7 @@ class Properties() :
     STATUS_CONVERTING = 'CONVERTING'
     SERVER_AUTO_RELOAD = False # 개발환경 자동리로드
     SERVER_API_HOST = '0.0.0.0' # uvicorn 실행 host
-    SERVER_API_WORKERS = 6 # uvicorn 서버 멀티프로세스 수
+    SERVER_API_WORKERS = 8 # uvicorn 서버 멀티프로세스 수
     SERVER_PREFIX = 'local' # prod / dev / local
     
 
@@ -60,7 +60,7 @@ class Properties() :
         self.__aws_s3_bucket = prop('aws_s3_bucket')
 
         # ip check
-        ip = Utils.getIP()
+        ip = Utils.get_ip()
         rootPath = ''
         if ip == prop('prod_server_host') : # prod
             self.SERVER_PREFIX = 'prod'
