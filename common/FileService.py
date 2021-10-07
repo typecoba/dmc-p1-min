@@ -23,6 +23,8 @@ import json
 # import boto3
 # from tqdm import tqdm
 import math
+import subprocess
+import time
 
 
 
@@ -218,17 +220,24 @@ class FileService():
         os.makedirs(os.path.dirname(path_to), exist_ok=True) # 경로확인/생성
         shutil.copy(path_from, path_to)
 
-
+    # os별 압축 모듈 분리
     def zipped(self, file_path:str, zip_path:str):
         os.makedirs(os.path.dirname(zip_path), exist_ok=True) # 경로확인/생성    
-        zip = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
-        zip.write(file_path, arcname=os.path.basename(file_path)) # 압축내용에 경로제거
-        self.logger.info('Zipped : '+ str(self.getInfo(zip_path)))
+        properties = Properties()
+        starttime = time.time()
+        if properties.SERVER_PREFIX == 'local' : # window
+            zip = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
+            zip.write(file_path, arcname=os.path.basename(file_path)) # 압축내용에 경로제거
+            
+            self.logger.info('zipped : '+ str(self.getInfo(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
+        
+        elif properties.SERVER_PREFIX == 'prod' : # centos
+            try : 
+                subprocess.check_call(f'zip -r {zip_path} {file_path}', shell=True)
+                self.logger.info('zipped : '+ str(self.getInfo(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
+            except subprocess.CalledProcessError :
+                self.logger.info('zip process error')
 
-        # 7일 이전 삭제 (db로 관리해야할듯)        
-        # delPath = '{toPath}.{date}.zip'.format(toPath=toPath, date=(datetime.now() + timedelta(days=-keepDay)).strftime('%Y%m%d'))
-        # if os.path.isfile(delPath):
-        #     os.remove(delPath)
 
     def delete(self, file_path:str):
         if os.path.exists(file_path) == False: 
