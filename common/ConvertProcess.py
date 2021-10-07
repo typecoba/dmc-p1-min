@@ -77,7 +77,7 @@ class ConvertProcess():
         segment_index = [list(data) for data in np.array_split(index, len(feed_ids))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]        
         #
         update_suffix = '_update' if is_update == True else ''
-        chunk_size = 500000
+        chunk_size = 1000000
         file_path=self.config[f'ep{update_suffix}']['fullPath']
         seperator=self.config[f'ep{update_suffix}']['sep']
         encoding=self.config[f'ep{update_suffix}']['encoding']
@@ -105,8 +105,8 @@ class ConvertProcess():
         for i, chunk_df in enumerate(ep_load): # chunk load
             # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
             for j, feed_id in enumerate(feed_ids):
-                segment_df = chunk_df[chunk_df['id'].str[-2:].isin(segment_index[j])] # id끝자리 2자리수 비교
-                
+                segment_df = chunk_df[chunk_df['id'].str[-2:].isin(segment_index[j])] # id끝자리 2자리수 비교                
+
                 # write                
                 feed_path_temp = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
                 feed_path_temp = feed_path_temp.replace('.',  '_temp.') # 중복제거 전 임시
@@ -138,7 +138,7 @@ class ConvertProcess():
             seperator = '\t'
         elif '.csv' in feed_path :
             seperator = ','
-        chunk_size = 500000
+        chunk_size = 1000000
         columns = list(self.config['columns'].keys()) # 필요컬럼만
 
         # 중복제거 id 컬럼 mask 사용
@@ -187,152 +187,7 @@ class ConvertProcess():
         
         if is_upload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
             self.logger.info('[ 4.UPLOAD ]')
-            self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드
-        
-
-    '''
-    # download -> chunk epLoad -> segment -> drop duplication-> filter -> feedWrite -> feedUpload
-    # isUpdateEp : True인경우 ep저장 subfix, api upload시 플래그 전달
-    # isUpload : True인경우 api upload 실행
-    def execute_temp(self, catalog_id=None, isUpdateEp=False, isUpload=False):        
-        self.logger.info(f'==Convert Execute Start {self.epName} {catalog_id}==')
-        self.convertFilter = ConvertFilter(self.config, catalog_id, isUpdateEp) # 필터 클래스
-        self.convertFilter.setLogger(self.logger)
-        
-        # [1. download]
-        # self.logger.info('[ 1.EP DOWNLOAD ]')
-        # try :
-        #     responseModel = self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=isUpdateEp)
-        #     self.logger.info(responseModel.get())
-        # except Exception as e :            
-        #     self.logger.info(str(e)) # 여기에서 exception이 제대로 찍혀야함
-
-        # [2. convert]
-        self.logger.info('[ 2.CONVERT - filtering ]')
-        feedIdList = list(self.config['catalog'][catalog_id]['feed'].keys())
-
-        # 0~9 배열 균등분배 후 list출력
-        indexMap = list(map(str,range(10))) # ['0','1','2','3','4','5','6','7','8','9']
-        segmentIndexMap = [list(data) for data in np.array_split(indexMap, len(feedIdList))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]
-        # print(segmentIndexMap)
-        
-        if isUpdateEp : 
-            update_suffix = '_update'
-        else:
-            update_suffix = ''
-                    
-        
-        epLoad = self.chunkLoad(
-            chunkSize=500000,
-            filePath=self.config[f'ep{update_suffix}']['fullPath'],
-            seperator=self.config[f'ep{update_suffix}']['sep'],
-            encoding=self.config[f'ep{update_suffix}']['encoding'],
-            compression= 'infer' if self.config[f'ep{update_suffix}']['zipformat'] == '' else self.config[f'ep{update_suffix}']['zipformat']
-        )
-        
-        ## convert 진행
-        
-        totalCount=0
-        for i, chunkDF in enumerate(epLoad): # chunk load            
-            # filter
-            chunkDF = self.convertFilter.run(chunkDF)
-
-            # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
-            for j, feed_id in enumerate(feedIdList):
-                segmentDF = chunkDF[chunkDF['id'].str[-1:].isin(segmentIndexMap[j])] # id끝자리 j
-                
-                # write                
-                feedPath_temp = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
-                feedPath_temp = feedPath_temp.replace('.',  '_temp.') # 중복제거 전 임시
-
-                # print(segmentDF['id'][:5])
-                mode = 'w' if i==0 else 'a' # 피드별 파일쓰기
-                self.feedWrite(mode=mode, feedPath=feedPath_temp, df=segmentDF)
-            
-            # log
-            totalCount = totalCount + chunkDF.shape[0]
-            self.logger.info(f'..{format(totalCount,",")} row processed')
-
-            # memory clean
-            del[[chunkDF]]
-            gc.collect()
-            # break        
-        
-
-        # [3. upload] 피드별로 읽어 중복제거 / 압축 / 백업 / 업로드
-        self.logger.info('[ 3.CONVERT - drop_duplicate/zip ]')
-                
-        # pool 사용하여 동시처리
-        pool = Pool( min(5, len(feedIdList)) ) # 분할된 feed 갯수기준 최대 5개
-        args = []
-        for i, feed_id in enumerate(feedIdList):
-            args.append((catalog_id, feed_id, update_suffix, isUpdateEp, isUpload))
-        
-        pool.starmap(self.dropDuplicateFeed, args)
-        pool.close()
-        pool.join()
-
-                                    
-        # all파일 압축 / 제거
-        # feedAllPath = self.config['catalog'][catalog_id]['feed_all'][f'fullPath{update_suffix}']
-        # if self.config['info']['media'] != 'criteo' : # 크리테오는 압축안함
-        #     self.fileService.zipped(feedAllPath, feedAllPath+".zip")
-            # self.fileService.delete(feedAllPath)
-            # pass
-    
-        self.logger.info(f'==Convert Execute End {self.epName} {catalog_id}==')
-            
-
-    # 피드별 중복제거
-    def dropDuplicateFeed(self, catalog_id, feed_id, update_suffix, isUpdateEp, isUpload):        
-        feedPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 중복제거 후 최종
-        feedPath_temp = feedPath.replace('.',  '_temp.') # 중복제거 전 임시
-        feedPublicPath = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}'] # ftp공개 주소
-        if '.tsv' in feedPath :
-            sep = '\t'
-        elif '.csv' in feedPath :
-            sep = ','
-
-        # print(feedPath)
-        # print(feedPath_temp)
-        # print(feedPublicPath)
-
-        # 중복제거
-        feedIdDF = pd.read_csv(feedPath_temp, usecols=['id'], encoding='utf-8', sep=sep, dtype=str) # dtype 명시            
-        mask = ~feedIdDF.duplicated(subset=['id'], keep='first') # id컬럼기준 masking 생성            
-        
-        chunkSize = 500000
-        chunkIter = self.chunkLoad(chunkSize=chunkSize, filePath=feedPath_temp, seperator=sep, encoding='utf-8')
-        for j, chunkDF in enumerate(chunkIter) :
-            # index for mask
-            chunkDF.index = mask[j*chunkSize : j*chunkSize + len(chunkDF.index)]                
-
-            # feed_all 쓰기 (첫번째 피드 첫번째 행 이후 이어쓰기) (머천센터등 필요)
-            # mode = 'w' if (i==0 and j==0) else 'a'
-            # self.feedWrite(mode=mode, feedPath=feedAllPath, df=chunkDF.loc[True]) # 제거
-            
-            # feed 쓰기 (피드별 새로쓰기)
-            mode = 'w' if j==0 else 'a'
-            self.feedWrite(mode=mode, feedPath=feedPath, df=chunkDF.loc[True])
-
-            # memory clean
-            del[[chunkDF]]
-            gc.collect()
-        
-        # memory clean
-        del[[feedIdDF, mask]]
-        gc.collect()
-        
-        # 압축 / tsv 제거 / 업로드
-        if self.config['info']['media'] != 'criteo' : 
-            self.fileService.zipped(feedPath, feedPath+".zip")            
-            # self.fileService.delete(feedPath)
-            # self.fileService.delete(feedPath_temp)
-        
-        if isUpload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
-            self.logger.info('[ 4.UPLOAD ]')
-            self.facebookAPI.upload(feed_id=feed_id, feed_url=feedPublicPath, isUpdateEp=isUpdateEp) # api 업로드
-    '''
+            self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드           
 
 
     # pixel데이터 다운로드 (to ep)
