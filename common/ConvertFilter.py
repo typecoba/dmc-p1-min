@@ -147,7 +147,7 @@ class ConvertFilter():
             # hmall
             # hmall 카테고리 제외건은 공통필터에서 적용 - config['filter']['exclude']['google_product_category']
             # 증분업데이트시 'out of stock'의 누락데이터 채우기 *일반적인 경우가 되면 분리필요
-            if self.catalog_id in ['321875988705706', '517196555826417', '3089747424480784'] :
+            if self.catalog_id in ['321875988705706', '517196555826417', '3089747424480784', '958772364735294', '275946927559143'] :
                 if  self.isUpdateEp == True : # 증분업데이트
                     dataframe.loc[dataframe['availability']=='in stock', 'condition'] = 'new'
                     dataframe.loc[dataframe['availability']=='out of stock', ['title','description']] = 'undefined'
@@ -170,6 +170,18 @@ class ConvertFilter():
                     # dataframe = dataframe[dataframe['custom_label_0']=='HSB'] # 방송상품 (21.07.30 추가/ 21.08.31 제거)
                     dataframe['link'] = dataframe.apply(lambda x :
                         'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/KqyqArugBkWPx4ZvVQTJdg?deeplink_custom_path=' + \
+                        parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
+                        axis=1
+                    )
+                elif self.catalog_id == '958772364735294': # hmall 패션                    
+                    dataframe['link'] = dataframe.apply(lambda x :
+                        'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/Q6IpUr0vy0mFIEtSRcgvlg?deeplink_custom_path=' + \
+                        parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
+                        axis=1
+                    )
+                elif self.catalog_id == '275946927559143': # hmall 뷰티                    
+                    dataframe['link'] = dataframe.apply(lambda x :
+                        'https://PC5tOwFSxk6rMl5hMJ6LPA.adtouch.adbrix.io/api/v1/click/bGr60eYF6kysyCsnxS2r5g?deeplink_custom_path=' + \
                         parse.quote('hmallmobile://front/pda/smItemDetailR.do?pReferCode=s58&ItemCode=' + x['id'] + '&pTcCode=0000002823&utm_source=insta&utm_medium=cpm_da&utm_campaign=retargeting'),
                         axis=1
                     )
