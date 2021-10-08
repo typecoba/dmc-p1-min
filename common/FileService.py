@@ -233,7 +233,7 @@ class FileService():
         
         elif properties.SERVER_PREFIX == 'prod' : # centos
             try : 
-                subprocess.check_call(f'zip -r {zip_path} {file_path}', shell=True)
+                subprocess.check_call(f'zip -FS {zip_path} {file_path}', shell=True)
                 self.logger.info('zipped : '+ str(self.getInfo(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
             except subprocess.CalledProcessError :
                 self.logger.info('zip process error')
