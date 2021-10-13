@@ -28,10 +28,7 @@ class ConvertFilter():
         return self.result
 
     # 1. 공통 filter
-    def commonFilter(self, dataframe=None):
-        # 컬럼추출 columns {'a':'b'}  'a'->'b'
-        # keys = list(self.config['columns'].keys())        
-        # dataframe = dataframe[keys] # 필요컬럼만
+    def commonFilter(self, dataframe=None):        
         dataframe.rename(columns=self.config['columns'], inplace=True) # key 수정            
         
         # 공백제거, result.apply(lambda x: x.str.strip(), axis=1) 로 돌리면 너무느림

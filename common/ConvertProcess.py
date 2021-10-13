@@ -33,16 +33,18 @@ class ConvertProcess():
         self.facebookAPI.setLogger(self.logger)
         self.properties = Properties()
 
+        self.is_feed_segment = True # feed segment flag
+
     def execute(self, catalog_id:str=None, is_update:bool=False, is_upload:bool=False) :        
         self.logger.info(f'==Convert Execute Start {self.config["info"]["name"]} {catalog_id}==')
 
         # 1. 원본 ep 다운로드
-        self.logger.info('[ 1.EP DOWNLOAD ]')
+        self.logger.info('[ 1.EP Download ]')
         response = self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=is_update)
         self.logger.info(response.get())
         
         # 2. chunk로 읽어 피드 수 만큼 균등하게 분리 (대용량피드 상품수 제한 대응)
-        self.logger.info('[ 2.Feed Segmentation ]')        
+        self.logger.info('[ 2.Feed Segmentation ]')
         self.feed_segment(catalog_id, is_update)
         
         # 3. 멀티프로세스 처리 (분할된 피드별 중복제거 / 필터링 / 압축 / 업로드)
@@ -50,8 +52,8 @@ class ConvertProcess():
         feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
         pool = Pool( min(1, len(feed_ids)) ) # 분할된 feed 갯수기준 최대 1개
         args = []
-        for i, feed_id in enumerate(feed_ids):
-            args.append((catalog_id, feed_id, is_update, is_upload)) # 매개변수 리스트        
+        for i, feed_id in enumerate(feed_ids):            
+            args.append((catalog_id, feed_id, i, is_update, is_upload)) # 매개변수 리스트        
         pool.starmap(self.feed_filtering_upload, args) # pool을 통해 실행
         pool.close()
         pool.join()
@@ -61,9 +63,15 @@ class ConvertProcess():
     # 피드기준 id 균등분배, 매번 같은피드에 위치
     # feed 최대10개 -> id끝자리 1자리수(0-9)
     # feed 10개이상 -> id끝자리 2자리수(00-99)
-    # 최대 1억건 이상 피드고려 2자리수 분배
+    # 피드분할은 ep기준 한번만 일어나면 됨
+    # 피드가 동일한경우 feed갯수는 맞춰야 함 (ep용량땜에 나누는것이므로..)
+    # 파일이름은 feed에 종속되지 않도록 함
     def feed_segment(self, catalog_id:str=None, is_update:bool=False):
-        #
+        # check segment flag
+        if self.is_feed_segment == False : 
+            self.logger.info('segment passed')
+            return None 
+        
         feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
 
         # ['00'...'99']
@@ -74,11 +82,11 @@ class ConvertProcess():
             else : 
                 index.append(str(num))
         
-        segment_index = [list(data) for data in np.array_split(index, len(feed_ids))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]        
+        segment_index = [list(data) for data in np.array_split(index, len(feed_ids))] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]
         #
         update_suffix = '_update' if is_update == True else ''
         chunk_size = 1000000
-        file_path=self.config[f'ep{update_suffix}']['fullPath']
+        file_path=self.config[f'ep{update_suffix}']['fullPath']                
         seperator=self.config[f'ep{update_suffix}']['sep']
         encoding=self.config[f'ep{update_suffix}']['encoding']
         compression= 'infer' if self.config[f'ep{update_suffix}']['zipformat'] == '' else self.config[f'ep{update_suffix}']['zipformat']
@@ -104,16 +112,13 @@ class ConvertProcess():
         # segmentation        
         for i, chunk_df in enumerate(ep_load): # chunk load
             # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
-            for j, feed_id in enumerate(feed_ids):
-                segment_df = chunk_df[chunk_df['id'].str[-2:].isin(segment_index[j])] # id끝자리 2자리수 비교                
-
+            for j, feed_id in enumerate(feed_ids):                
+                segment_df = chunk_df[chunk_df['id'].str[-2:].isin(segment_index[j])] # id끝자리 2자리수 비교
+                            
                 # write                
-                feed_path_temp = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}']
-                feed_path_temp = feed_path_temp.replace('.',  '_temp.') # 중복제거 전 임시
-
-                # print(segmentDF['id'][:5])
+                segment_path = self.config['ep']['segmentPath'][j]
                 mode = 'w' if i==0 else 'a' # 피드별 파일쓰기
-                self.feedWrite(mode=mode, feedPath=feed_path_temp, df=segment_df)
+                self.feedWrite(path=segment_path, mode=mode, df=segment_df)
             
             # log
             loaded_cnt = loaded_cnt + chunk_df.shape[0]
@@ -121,10 +126,64 @@ class ConvertProcess():
 
             # memory clean
             del[[chunk_df]]
-            gc.collect()            
+            gc.collect()
+
+        # flag 처리
+        self.is_feed_segment = False
+
+    def feed_filtering_upload(self, catalog_id:str, feed_id:str, segment_num:int, is_update:bool=False, is_upload:bool=False):
+        self.convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스
+        self.convertFilter.setLogger(self.logger)
+        #
+        update_suffix = '_update' if is_update == True else ''
+        segment_path = self.config['ep']['segmentPath'][segment_num] # feed단위 분리된 ep path
+        feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
+        feed_public_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}'] # ftp공개 path
+        #                
+        if '.tsv' in segment_path :
+            seperator = '\t'
+        elif '.csv' in segment_path :
+            seperator = ','
+                        
+        feed_df = pd.read_csv(segment_path,
+            nrows=None, 
+            header=0, # header row
+            dtype=str, # string type 인식 
+            sep=seperator, # 명시
+            # lineterminator='\r',
+            # compression=compression,
+            error_bad_lines=False, # error skip
+            # usecols=columns, # chunk에도 컬럼명 표기
+            encoding='utf-8')
+                
+
+        # 1. 중복제거
+        count_prev = len(feed_df)
+        feed_df = feed_df.drop_duplicates(subset=['id'], keep='last', ignore_index=True)
+        count_curr = len(feed_df)
+        self.logger.info(f'feed {feed_id} drop_doplication {count_prev}->{count_curr}')
+        
+        # 2. filter 
+        feed_df = self.convertFilter.run(feed_df)
+        self.logger.info(f'feed {feed_id} convertFilter complete')
+
+        # 3. feed 쓰기 (피드별 새로쓰기)
+        is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함
+        self.feedWrite(path=feed_path, mode='w', df=feed_df, is_compression=is_compression)
+        self.logger.info(f'feed {feed_id} file write complete')
+
+        # memory clean
+        del[[feed_df]]
+        gc.collect()
+
+
+        if is_upload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
+            self.logger.info('[ 4.UPLOAD ]')
+            self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드    
+
 
     
-    
+    ''' *backup
     def feed_filtering_upload(self, catalog_id:str, feed_id:str, is_update:bool=False, is_upload:bool=False):
         self.convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스
         self.convertFilter.setLogger(self.logger)
@@ -141,7 +200,8 @@ class ConvertProcess():
         chunk_size = 1000000
         columns = list(self.config['columns'].keys()) # 필요컬럼만
 
-        # 중복제거 id 컬럼 mask 사용
+        # 중복제거 
+        # id행만 읽어 전체 중복제거 mask 생성
         feed_ids = pd.read_csv(feed_path_temp, usecols=['id'], encoding='utf-8', sep=seperator, dtype=str) # dtype 명시            
         mask = ~feed_ids.duplicated(subset=['id'], keep='first') # id컬럼기준 masking 생성            
                         
@@ -188,7 +248,7 @@ class ConvertProcess():
         if is_upload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
             self.logger.info('[ 4.UPLOAD ]')
             self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드           
-
+    '''
 
     # pixel데이터 다운로드 (to ep)
     def pixelDataDownLoad(self):
@@ -222,21 +282,29 @@ class ConvertProcess():
     '''
 
     #
-    def feedWrite(self, mode='w', feedPath=None, df=None):
-        os.makedirs(os.path.dirname(feedPath), exist_ok=True) # 경로확인/생성
+    def feedWrite(self, path:str=None, mode:str='w', is_compression:bool=False, df:pd.DataFrame=None):
+        os.makedirs(os.path.dirname(path), exist_ok=True) # 경로확인/생성
         if mode == 'w': # 새로쓰기
             header=True
         elif mode == 'a': # 이어쓰기
             header=False
 
-        if feedPath.endswith('.csv') :
+        if path.endswith('.csv') :
             sep = ','
-        elif feedPath.endswith('.tsv') :
+        elif path.endswith('.tsv') :
             sep = '\t'
+        
+        if is_compression :
+            path = path+'.gz'
+            compression = 'gzip'
+        else :            
+            compression = 'infer'
 
-        df.to_csv(feedPath, 
+        df.to_csv(  path, 
                     index=False, # 자체 인덱스제거
                     mode=mode,
                     sep=sep,
                     header=header, # 컬럼명 
+                    compression=compression,
+                    chunksize=1000000,
                     encoding='utf-8')

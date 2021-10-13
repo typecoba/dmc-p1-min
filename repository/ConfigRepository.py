@@ -66,47 +66,55 @@ class ConfigRepository():
         dateMonth = datetime.now().strftime('%Y%m')
         if media in ['facebook', 'google'] : # 페북(tsv,csv,xml), 구글(tsv,xml)  *ep 공유하기도 하기때문에 tsv로 통일            
             feedFormat = 'tsv'
-            zipFormat = '.zip'
+            zipFormat = '.gz'
         elif media=='criteo' : # 크리테오 (csv,xml) *압축하지 않는다
             feedFormat = 'csv'
             zipFormat = ''
  
-        # ep
+        # [ep]
         epFileName = f'ep_{epName}.{epFormat}'
-        epFullPath = f'{self.prop.getEpPath()}/{epFileName}'
+        epFullPath = f'{self.prop.getEpPath()}/{epName}/{epFileName}'
+        epUpdateFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}_update.{epFormat}'
         config['ep']['fullPath'] = epFullPath
         if 'ep_update' in config : # ep_update 있는경우
-            config['ep_update']['fullPath'] = f'{self.prop.getEpPath()}/ep_{epName}_update.{epFormat}'
+            config['ep_update']['fullPath'] = epUpdateFullPath
 
-        # catalog -> feed
+        # [ep][segment]
+        # ep단위로 feed갯수만큼 한번만 분할하여 catalog끼리 활용
+        # *feed 갯수는 카탈로그끼리 동일해야함
+        segmentPath = []
+        feedCount = len(config['catalog'][next(iter(config['catalog']))]['feed'])
+        for i in range(feedCount) :
+            segmentPath.append(os.path.dirname(epFullPath)+f'/segment_{i}.csv')        
+        config['ep']['segmentPath'] = segmentPath
+        
+        segmentPath = []
+        if 'ep_update' in config : # ep_update 있는경우
+            for i in range(feedCount) :
+                segmentPath.append(os.path.dirname(epUpdateFullPath)+f'/segment_{i}.csv')
+            config['ep_update']['segmentPath'] = segmentPath
+        
+
+        # [catalog][feed]
         for catalog_id, catalogDict in config['catalog'].items():
-            feedPath = f'{self.prop.getFeedPath()}/{media}/{catalog_id}' # catalog_id 폴더
+            feedPath = f'{self.prop.getFeedPath()}/{media}/{catalog_id}' # catalog_id 폴더            
+            
             if self.prop.SERVER_PREFIX == 'local':
                 publicFeedPath = feedPath
             else :
                 publicFeedPath = f'{self.prop.getServerDomain()}/feed/{media}/{catalog_id}' # 외부접근용 도메인 경로
-            
-            feedAllFileName = f'{media}_{catalog_id}_all.{feedFormat}'
-            feedAllUpdateFileName = f'{media}_{catalog_id}_update_all.{feedFormat}'
-            # 피드가 한개인경우엔 동일함..
-            catalogDict['feed_all'] = {'fullPath' : f'{feedPath}/{feedAllFileName}'}
-            catalogDict['feed_all']['publicPath'] = f'{publicFeedPath}/{feedAllFileName}{zipFormat}'
 
-            if 'ep_update' in config: # ep_update 있는경우
-                catalogDict['feed_all']['fullPath_update'] = f'{feedPath}/{feedAllUpdateFileName}'
-                catalogDict['feed_all']['publicPath_update'] = f'{publicFeedPath}/{feedAllUpdateFileName}{zipFormat}'
-
-            # feed
             for feed_id, feed in catalogDict['feed'].items():
                 feedFileName = f'{media}_{catalog_id}_{feed_id}.{feedFormat}'
-                feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.{feedFormat}'
+                feedUpdateFileName = f'{media}_{catalog_id}_{feed_id}_update.{feedFormat}'                
                 config['catalog'][catalog_id]['feed'][feed_id]['fullPath'] = f'{feedPath}/{feedFileName}'
                 config['catalog'][catalog_id]['feed'][feed_id]['publicPath'] = f'{publicFeedPath}/{feedFileName}{zipFormat}' # 외부접근 Path (domain/path)
                 
                 if 'ep_update' in config: # ep_update 있는경우
                     config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedUpdateFileName}'
                     config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}{zipFormat}' # 외부접근 Path (domain/path)
-                    
+
+        
 
         # convert log
         logFileName = f'log_convert_{epName}.{dateMonth}.log' # 월별
