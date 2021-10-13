@@ -116,7 +116,7 @@ class ConvertProcess():
                 segment_df = chunk_df[chunk_df['id'].str[-2:].isin(segment_index[j])] # id끝자리 2자리수 비교
                             
                 # write                
-                segment_path = self.config['ep']['segmentPath'][j]
+                segment_path = self.config[f'ep{update_suffix}']['segmentPath'][j]
                 mode = 'w' if i==0 else 'a' # 피드별 파일쓰기
                 self.feedWrite(path=segment_path, mode=mode, df=segment_df)
             
@@ -136,7 +136,7 @@ class ConvertProcess():
         self.convertFilter.setLogger(self.logger)
         #
         update_suffix = '_update' if is_update == True else ''
-        segment_path = self.config['ep']['segmentPath'][segment_num] # feed단위 분리된 ep path
+        segment_path = self.config[f'ep{update_suffix}']['segmentPath'][segment_num] # feed단위 분리된 ep path
         feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
         feed_public_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}'] # ftp공개 path
         #                
@@ -165,7 +165,7 @@ class ConvertProcess():
         
         # 2. filter 
         feed_df = self.convertFilter.run(feed_df)
-        self.logger.info(f'feed {feed_id} convertFilter complete')
+        self.logger.info(f'feed {feed_id} convert filtering complete')
 
         # 3. feed 쓰기 (피드별 새로쓰기)
         is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함

@@ -85,13 +85,13 @@ class ConfigRepository():
         segmentPath = []
         feedCount = len(config['catalog'][next(iter(config['catalog']))]['feed'])
         for i in range(feedCount) :
-            segmentPath.append(os.path.dirname(epFullPath)+f'/segment_{i}.csv')        
+            segmentPath.append(os.path.dirname(epFullPath)+f'/segment_{i}.csv')
         config['ep']['segmentPath'] = segmentPath
         
         segmentPath = []
         if 'ep_update' in config : # ep_update 있는경우
             for i in range(feedCount) :
-                segmentPath.append(os.path.dirname(epUpdateFullPath)+f'/segment_{i}.csv')
+                segmentPath.append(os.path.dirname(epUpdateFullPath)+f'/segment_{i}_update.csv')
             config['ep_update']['segmentPath'] = segmentPath
         
 
