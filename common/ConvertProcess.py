@@ -88,13 +88,21 @@ class ConvertProcess():
         chunk_size = 1000000
         file_path=self.config[f'ep{update_suffix}']['fullPath']                
         seperator=self.config[f'ep{update_suffix}']['sep']
-        encoding=self.config[f'ep{update_suffix}']['encoding']
-        compression= 'infer' if self.config[f'ep{update_suffix}']['zipformat'] == '' else self.config[f'ep{update_suffix}']['zipformat']
+        encoding=self.config[f'ep{update_suffix}']['encoding']        
+        
+        # 원본 ep압축된 경우
+        ep_format = os.path.splitext(self.config[f'ep{update_suffix}']['fullPath'])[-1]
+        if ep_format == '.gz': # 파일 확장자 확인
+            compression = 'gzip'
+        elif ep_format == '.zip':
+            compression = 'zip'
+        else :
+            compression = 'infer'
         #
         columns = list(self.config['columns'].keys()) # 필요컬럼만         
-        loaded_cnt=0        
+        loaded_cnt=0
 
-        # chunk load        
+        # chunk load
         ep_load = pd.read_csv(file_path,
             nrows=None,
             chunksize=chunk_size,

@@ -60,20 +60,24 @@ class ConfigRepository():
     # 파일저장 Path 생성
     def setPath(self, config=None):
         epName = config['info']['name']          
-        epFormat = config['ep']['format'] if config['ep']['zipformat'] == '' else config['ep']['zipformat'] # ep원본 format으로 떨어지게 함
         media = config['info']['media'] # 매체
-        dateDay = datetime.now().strftime('%Y%m%d')
-        dateMonth = datetime.now().strftime('%Y%m')
+        #
+        epFormat = os.path.splitext(config[f'ep']['url'])[-1][1:]
+        if epFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
+            epFormat = config['ep']['format'] # config에 명시된 형식
+        #                
         if media in ['facebook', 'google'] : # 페북(tsv,csv,xml), 구글(tsv,xml)  *ep 공유하기도 하기때문에 tsv로 통일            
             feedFormat = 'tsv'
             zipFormat = '.gz'
         elif media=='criteo' : # 크리테오 (csv,xml) *압축하지 않는다
             feedFormat = 'csv'
             zipFormat = ''
+        #            
+        dateDay = datetime.now().strftime('%Y%m%d')
+        dateMonth = datetime.now().strftime('%Y%m')            
  
-        # [ep]
-        epFileName = f'ep_{epName}.{epFormat}'
-        epFullPath = f'{self.prop.getEpPath()}/{epName}/{epFileName}'
+        # [ep]        
+        epFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}.{epFormat}'
         epUpdateFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}_update.{epFormat}'
         config['ep']['fullPath'] = epFullPath
         if 'ep_update' in config : # ep_update 있는경우
