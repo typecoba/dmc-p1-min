@@ -59,8 +59,8 @@ class ConfigRepository():
 
     # 파일저장 Path 생성
     def setPath(self, config=None):
-        epName = config['info']['name']          
-        media = config['info']['media'] # 매체
+        epName = config['info']['name'] # 클라이언트명         
+        media = config['info']['media'] # 매체        
         #
         epFormat = os.path.splitext(config[f'ep']['url'])[-1][1:]
         if epFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
@@ -74,7 +74,7 @@ class ConfigRepository():
             zipFormat = ''
         #            
         dateDay = datetime.now().strftime('%Y%m%d')
-        dateMonth = datetime.now().strftime('%Y%m')            
+        dateMonth = datetime.now().strftime('%Y%m')
  
         # [ep]        
         epFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}.{epFormat}'
@@ -116,10 +116,4 @@ class ConfigRepository():
                 
                 if 'ep_update' in config: # ep_update 있는경우
                     config['catalog'][catalog_id]['feed'][feed_id]['fullPath_update'] = f'{feedPath}/{feedUpdateFileName}'
-                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}{zipFormat}' # 외부접근 Path (domain/path)
-
-        
-
-        # convert log
-        logFileName = f'log_convert_{epName}.{dateMonth}.log' # 월별
-        config['log'] = {'fullPath': f'{self.prop.getConvertLogPath()}/{logFileName}'}
+                    config['catalog'][catalog_id]['feed'][feed_id]['publicPath_update'] = f'{publicFeedPath}/{feedUpdateFileName}{zipFormat}' # 외부접근 Path (domain/path)            

@@ -11,6 +11,7 @@ import requests
 import csv
 from multiprocessing import Process, Queue, Pool
 import numpy as np
+from datetime import datetime
 # from tqdm import tqdm
 
 '''
@@ -24,15 +25,17 @@ class ConvertProcess():
         config관련 정보 분리해야함
         config를 router에서 최초 한번 불러와서 전달하는게 좋을듯
         '''
-        self.config = config        
-        self.logger = Logger(name=f'log_{config["info"]["name"]}', filePath=config['log']['fullPath']) # logger self.__class__.__qualname__
-    
+        self.config = config
+        self.properties = Properties()
+        # convert log
+        convert_log_filename = f'convert_{self.config["info"]["name"]}_{self.config["info"]["media"]}_{datetime.now().strftime("%Y%m")}.log' # 월별 (convert_ssg_facebook_202110.log)
+        self.logger = Logger(name=f'log_{config["info"]["name"]}_{config["info"]["media"]}', filePath=f'{self.properties.getConvertLogPath()}/{convert_log_filename}') # logger self.__class__.__qualname__
+        #
         self.fileService = FileService() # 파일 매니저 클래스
         self.fileService.setLogger(self.logger) # 파이프라인 공통로거 삽입
         self.facebookAPI = FacebookAPI() # facebook api
         self.facebookAPI.setLogger(self.logger)
-        self.properties = Properties()
-
+        #        
         self.is_feed_segment = True # feed segment flag
 
     def execute(self, catalog_id:str=None, is_update:bool=False, is_upload:bool=False) :        
