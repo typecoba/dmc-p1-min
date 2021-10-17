@@ -30,7 +30,7 @@ class Utils():
         return ip
 
     @staticmethod
-    def make_dir(path='', mode='') -> None:
+    def make_dir(path:str, mode:str) -> None:
         if not os.path.isdir(path): 
             oldmask = os.umask(0)
             os.makedirs(path, 0o775)

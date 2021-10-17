@@ -12,6 +12,7 @@ import csv
 from multiprocessing import Process, Queue, Pool
 import numpy as np
 from datetime import datetime
+import time 
 # from tqdm import tqdm
 
 '''
@@ -36,14 +37,124 @@ class ConvertProcess():
         self.facebookAPI = FacebookAPI() # facebook api
         self.facebookAPI.setLogger(self.logger)
         #        
-        self.is_feed_segment = True # feed segment flag
+        # self.is_feed_segment = True # feed segment flag
 
-    def execute(self, catalog_id:str=None, is_update:bool=False, is_upload:bool=False) :        
-        self.logger.info(f'==Convert Execute Start {self.config["info"]["name"]} {catalog_id}==')
+
+    
+    def execute(self, catalog_id:str=None, is_update:bool=False, is_upload:bool=False) :
+        ## catalog_id 유/무 에따라 일부만 적용할것인지 선택
+        if catalog_id == None :
+            catalog_ids = list(self.config['catalog'].keys())
+        else:
+            catalog_ids = [catalog_id]
+
+        self.logger.info(f'==Convert Execute Start {self.config["info"]["name"]} {catalog_ids}==')
+        update_suffix = '_update' if is_update == True else ''
 
         # 1. 원본 ep 다운로드
-        self.logger.info('[ 1.EP Download ]')
-        response = self.fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=is_update)
+        self.logger.info('[ 1.EP Download ]')    
+        response = self.fileService.download_ep(url=self.config[f'ep{update_suffix}']['url'], path=self.config[f'ep{update_suffix}']['fullPath'])
+        self.logger.info(response.get())
+
+        # 2. ep chunk load -> filtering -> feed write
+        self.logger.info('[ 2.Feed Segmentation & Filter & Write ]')
+
+        # segment index 생성 
+        index = [] # ['00'...'99']
+        for num in range(0,100): 
+            if num < 10:
+                index.append('0'+str(num))
+            else : 
+                index.append(str(num))
+        feed_count = len(self.config['catalog'][next(iter(self.config['catalog']))]['feed'])
+        segment_index = [list(data) for data in np.array_split(index, feed_count)] # [['0','1'],['2','3'],['4','5'],['6','7'],['8','9']]        
+        #
+        chunk_size = 1000000
+        file_path=self.config[f'ep{update_suffix}']['fullPath']                
+        seperator=self.config[f'ep{update_suffix}']['sep']
+        encoding=self.config[f'ep{update_suffix}']['encoding']        
+        
+        # 원본 ep압축된 경우
+        ep_format = os.path.splitext(self.config[f'ep{update_suffix}']['fullPath'])[-1]
+        if ep_format == '.gz': # 파일 확장자 확인
+            compression = 'gzip'
+        elif ep_format == '.zip':
+            compression = 'zip'
+        else :
+            compression = 'infer'
+
+        columns = list(self.config['columns'].keys()) # 필요컬럼만         
+
+        # chunk load
+        ep_load = pd.read_csv(file_path,
+            nrows=None,
+            chunksize=chunk_size,
+            header=0, # header row
+            dtype=str, # string type 인식                            
+            # converters={'id': lambda x: print(x)},
+            sep=seperator, # 명시
+            # lineterminator='\r',
+            compression=compression,
+            error_bad_lines=False, # error skip
+            usecols=columns, # chunk에도 컬럼명 표기
+            iterator=True,
+            encoding=encoding)
+        
+        
+        # make feed
+        loaded_cnt=0
+        for chunk_loop, chunk_df in enumerate(ep_load): # chunk load            
+            # catalog for            
+            for catalog_loop, catalog_id in enumerate(catalog_ids):                 
+                convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스
+                feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())                
+                                
+                # filter
+                feed_df = convertFilter.run(chunk_df)
+
+                # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
+                for feed_loop, feed_id in enumerate(feed_ids):                                        
+                    segment_df = feed_df[feed_df['id'].str[-2:].isin(segment_index[feed_loop])] # id끝자리 2자리수 비교
+                
+                    # write                
+                    feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
+                    is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함
+                    mode = 'w' if chunk_loop==0 else 'a' # 피드별 파일쓰기
+                    self.feedWrite(path=feed_path, mode=mode, df=segment_df, is_compression=is_compression)
+            
+                # memory clean
+                del[[feed_df]]
+                gc.collect()    
+                                            
+            # log
+            loaded_cnt = loaded_cnt + chunk_df.shape[0]
+            self.logger.info(f'..{format(loaded_cnt,",")} row segmented')
+
+            # memory clean
+            del[[chunk_df]]
+            gc.collect()
+
+        # upload
+        if is_upload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
+            self.logger.info('[ 4.UPLOAD ]')
+            for catalog_id in catalog_ids:
+                feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())
+                for feed_id in feed_ids:
+                    time.sleep(3)
+                    feed_public_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
+                    self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드    
+
+
+
+    '''
+    # catalog_id 유/무에 따라 선택/전체 진행
+    def execute_temp(self, catalog_id:str=None, is_update:bool=False, is_upload:bool=False) :                
+        self.logger.info(f'==Convert Execute Start {self.config["info"]["name"]} {catalog_id}==')
+        update_suffix = '_update' if is_update == True else ''
+
+        # 1. 원본 ep 다운로드
+        self.logger.info('[ 1.EP Download ]')    
+        response = self.fileService.download_ep(url=self.config[f'ep{update_suffix}']['url'], path=self.config[f'ep{update_suffix}']['fullPath'])
         self.logger.info(response.get())
         
         # 2. chunk로 읽어 피드 수 만큼 균등하게 분리 (대용량피드 상품수 제한 대응)
@@ -155,6 +266,7 @@ class ConvertProcess():
             seperator = '\t'
         elif '.csv' in segment_path :
             seperator = ','
+
                         
         feed_df = pd.read_csv(segment_path,
             nrows=None, 
@@ -191,9 +303,8 @@ class ConvertProcess():
         if is_upload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
             self.logger.info('[ 4.UPLOAD ]')
             self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드    
+    '''
 
-
-    
     ''' *backup
     def feed_filtering_upload(self, catalog_id:str, feed_id:str, is_update:bool=False, is_upload:bool=False):
         self.convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스

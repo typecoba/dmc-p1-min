@@ -219,19 +219,6 @@ async def getFeedExport(catalog_id, feed_id):
     return response
 
 
-# feed segment 분할만.. 삭제예정
-@router.get('/feed/segmentation/{catalog_id}')
-async def getFeedSegmentation(catalog_id):
-    config = configRepository.findOne(catalog_id)
-    # exception
-    feedFullPath = config['catalog'][catalog_id]['feed_temp']
-    if os.path.isfile(feedFullPath) == False:
-        raise HTTPException(400, 'feed file not found')
-
-    convertProcess = ConvertProcess(config)
-    convertProcess.feedSegmentation(catalog_id=catalog_id)
-    return ResponseModel()
-
 
 # facebook api upload / update
 @router.get('/feed/upload/{catalog_id}')
@@ -290,10 +277,9 @@ async def getScheduleConvertProcess() :
     return ResponseModel(message=f'convertProcess count ({len(processList)})')        
 
 
-def convertProcessExecute(config, is_update, is_upload) :    
-    convertProcess = ConvertProcess(config)
-    for key, value in config['catalog'].items() :
-        convertProcess.execute(catalog_id=key, is_update=is_update, is_upload=is_upload)
+def convertProcessExecute(config:dict, is_update:bool, is_upload:bool) :    
+    convertProcess = ConvertProcess(config)    
+    convertProcess.execute(is_update=is_update, is_upload=is_upload)
 
 
 
