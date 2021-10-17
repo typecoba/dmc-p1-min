@@ -36,7 +36,7 @@ class FileService():
     def setLogger(self, logger=None):
         self.logger = logger    
     
-    def getInfo(self, filePath=None):
+    def get_info(self, filePath=None):
         if filePath==None :            
             # raise HTTPException(400, 'filePath is required')
             return None
@@ -90,7 +90,41 @@ class FileService():
     # 파일이 없으면 첫부분정도만 확인할수 있나?
     # 파일이 있으면 중간부터 확인할 수 있나?
     # def getEpDetail():
+    
+    # fileService/
+    # .download_ep
+    # .check_update
+    # .download
+    # .get_info
+    # .copy
+    # .delete
+    # .zip
+    
+    def download_ep(self, url:str=None, path:str=None) -> ResponseModel:
+        try:
+            # 파일 갱신 체크
+            if self.check_update(url, path) == False:
+                return ResponseModel(message='file not changed', content='')
+            # 파일 다운로드
+            result = self.download(url, path)
+            return ResponseModel(message='download complete', content=result)
+        except Exception as e:
+            raise HTTPException(400, str(e))
+        
 
+    def check_update(self, ori_path:str=None, down_path:str=None): # ori->down 방향성
+        oriInfo = self.get_info(ori_path)
+        downInfo = self.get_info(down_path)
+        is_update = True
+        
+        # 1. 다운로드 파일과 비교
+        if downInfo != None:
+            if parser.parse(downInfo['last_moddate']) >= parser.parse(oriInfo['last_moddate']) and downInfo['size'] == oriInfo['size']: # 로컬ep 시간이 최신이고 사이즈 같을경우
+                is_update = False
+
+        # 2. 서버단위 중복다운로드 체크
+                
+        return is_update
 
     '''
     [epdownload check & download]
@@ -100,8 +134,9 @@ class FileService():
     4. 실패/생략시 exception이 아니라 logging
     *** convert process 내부에서 연동되므로 exception을 함수 외부로 빼야하나?
 
-    '''    
-    def getEpDownload(self, catalog_id=None, isUpdateEp=False): # type = '' or 'update'
+    '''
+    '''
+    def getEpDownload_temp(self, catalog_id=None, isUpdateEp=False): # type = '' or 'update'
         configRepository = ConfigRepository()
         config = configRepository.findOne(catalog_id)
 
@@ -114,8 +149,8 @@ class FileService():
                 return ResponseModel(message='ep_update not found in config', content='')
 
             # 원본/로컬파일 비교 체크
-            epOriInfo = self.getInfo(config[epKey]['url'])          # 오리지널 ep info
-            epInfo = self.getInfo(config[epKey]['fullPath'])        # 로컬 ep info
+            epOriInfo = self.get_info(config[epKey]['url'])          # 오리지널 ep info
+            epInfo = self.get_info(config[epKey]['fullPath'])        # 로컬 ep info
             if epInfo != None : # 다운받은 파일이 있는경우
                 epOriSize = epOriInfo['size']                           # 오리지널 ep size
                 epOriModDate = parser.parse(epOriInfo['last_moddate'])  # 오리지널 ep 생성시간
@@ -146,7 +181,7 @@ class FileService():
         except Exception as e : 
             configRepository.updateOne({'catalog.{catalog_id}' : {'$exists': True}}, {'$set':{f'{epKey}.status':'', f'{epKey}.moddate':Utils.nowtime()}})
             raise e            
-        
+    '''    
         
 
     # aiohttp
@@ -163,7 +198,7 @@ class FileService():
                         if not chunk : break
                         await f.write(chunk)
 
-                    result = self.getInfo(file_path)
+                    result = self.get_info(file_path)
                     self.logger.info('Download complete : ' + str(result))
                     response.close()
                     return result
@@ -197,7 +232,7 @@ class FileService():
                 file.flush()
                 os.fsync(file.fileno())
         
-        return self.getInfo(file_path)
+        return self.get_info(file_path)
 
         
     # aiofiles        
@@ -211,7 +246,7 @@ class FileService():
                     if not chunk : break
                     await toFile.write(chunk)
                 
-                result = self.getInfo(path_to)
+                result = self.get_info(path_to)
                 self.logger.info('Copy ' + str(result))
                 return result
 
@@ -229,12 +264,12 @@ class FileService():
             zip = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
             zip.write(file_path, arcname=os.path.basename(file_path)) # 압축내용에 경로제거
             
-            self.logger.info('zipped : '+ str(self.getInfo(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
+            self.logger.info('zipped : '+ str(self.get_info(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
         
         elif properties.SERVER_PREFIX == 'prod' : # centos
             try : 
                 subprocess.check_call(f'zip -FS {zip_path} {file_path}', shell=True)
-                self.logger.info('zipped : '+ str(self.getInfo(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
+                self.logger.info('zipped : '+ str(self.get_info(zip_path))+ '\nprocess time : ' + str(time.time()-starttime))
             except subprocess.CalledProcessError :
                 self.logger.info('zip process error')
 

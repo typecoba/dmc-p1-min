@@ -100,9 +100,9 @@ async def delConfig(catalog_id):
 async def getEpInfo(catalog_id):
     config = configRepository.findOne(catalog_id)
     result = {}
-    result['ep'] = fileService.getInfo(config['ep']['url'])
+    result['ep'] = fileService.get_info(config['ep']['url'])
     if 'ep_update' in config :
-        result['ep_update'] = fileService.getInfo(config['ep_update']['url'])
+        result['ep_update'] = fileService.get_info(config['ep_update']['url'])
 
     return ResponseModel(content=result)
 
@@ -124,20 +124,16 @@ async def getEpExport(catalog_id):
 # 
 @router.get('/ep/download/{catalog_id}')
 async def getDownload(catalog_id):
-    try :        
-        return fileService.getEpDownload(catalog_id=catalog_id)
-    except Exception as e :    
-        raise e        
-
+    config = configRepository.findOne(catalog_id)
+    return fileService.download_ep(url=str(config['ep']['url']), path=str(config['ep']['fullPath']))
+    
 
 # ep_update 경로 추가
 @router.get('/ep/download/{catalog_id}/update')
 async def getDownloadUpdate(catalog_id): 
-    try:    
-        return fileService.getEpDownload(catalog_id=catalog_id, isUpdateEp=True)
-    except Exception as e :
-        raise e
-    
+    config = configRepository.findOne(catalog_id)
+    return fileService.download_ep(url=config['ep_update']['url'], path=config['ep_update']['fullPath'])
+
 
 
 # ep 내용확인
@@ -198,7 +194,7 @@ async def getEpConvert2feed(catalog_id):
 async def getFeedInfo(catalog_id, feed_id):
     config = configRepository.findOne(catalog_id)
     filePath = config['catalog'][catalog_id]['feed'][feed_id]['fullPath']
-    result = fileService.getInfo(filePath)
+    result = fileService.get_info(filePath)
     return ResponseModel(content=result)
 
 
