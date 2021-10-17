@@ -204,6 +204,11 @@ class ConvertFilter():
                 dataframe['price'] = dataframe['price'] + ' KRW'
                 dataframe['shipping'] = 'KR:::' +dataframe['shipping']+ ' KRW'
                 # condition값 치환은 GMC를 활용하는것으로 함
+            
+            # ssg_emart
+            if self.catalog_id == '503144101':
+                dataframe['price'] = f'{dataframe["price"]} KRW'
+                dataframe['shipping'] = f'KR:::{dataframe["shipping"]} KRW'
 
 
 
