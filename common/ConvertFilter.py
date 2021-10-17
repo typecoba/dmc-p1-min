@@ -207,8 +207,8 @@ class ConvertFilter():
             
             # ssg_emart
             if self.catalog_id == '503144101':
-                dataframe['price'] = f'{dataframe["price"]} KRW'
-                dataframe['shipping'] = f'KR:::{dataframe["shipping"]} KRW'
+                dataframe['price'] = dataframe["price"] + ' KRW'
+                dataframe['shipping'] = 'KR:::' +dataframe["shipping"]+ ' KRW'
 
 
 
