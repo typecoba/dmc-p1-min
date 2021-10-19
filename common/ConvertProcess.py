@@ -144,7 +144,7 @@ class ConvertProcess():
                     feed_public_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'publicPath{update_suffix}']
                     self.facebookAPI.upload(feed_id=feed_id, feed_url=feed_public_path, isUpdateEp=is_update) # api 업로드    
 
-
+        self.logger.info(f'==Convert Execute End {self.config["info"]["name"]} {catalog_id}==')
 
     '''
     # catalog_id 유/무에 따라 선택/전체 진행
