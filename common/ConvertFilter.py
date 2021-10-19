@@ -207,6 +207,11 @@ class ConvertFilter():
             
             # ssg_emart
             if self.catalog_id == '503144101':
+                custom_link = 'http://m.emart.ssg.com/item/itemView.ssg?itemId='+dataframe['id']+'&gateYn=Y&mobilAppSvcNo=1'
+                dataframe['display_ads_link'] = custom_link
+                dataframe['ads_redirect'] = custom_link
+                dataframe['link'] = custom_link
+                dataframe['mobile_link'] = custom_link
                 dataframe['price'] = dataframe["price"] + ' KRW'
                 dataframe['shipping'] = 'KR:::' +dataframe["shipping"]+ ' KRW'
 
