@@ -73,7 +73,7 @@ class ConvertProcess():
         file_path=self.config[f'ep{update_suffix}']['fullPath']                
         seperator=self.config[f'ep{update_suffix}']['sep']
         encoding=self.config[f'ep{update_suffix}']['encoding']        
-        
+                
         # 원본 ep압축된 경우
         ep_format = os.path.splitext(self.config[f'ep{update_suffix}']['fullPath'])[-1]
         if ep_format == '.gz': # 파일 확장자 확인
@@ -84,10 +84,11 @@ class ConvertProcess():
             compression = 'infer'
 
         columns = list(self.config['columns'].keys()) # 필요컬럼만         
-
+        limit = self.config[f'ep{update_suffix}']['limit'] if 'limit' in self.config[f'ep{update_suffix}'] else None
+        
         # chunk load
         ep_load = pd.read_csv(file_path,
-            nrows=None,
+            nrows= limit, # row limit
             chunksize=chunk_size,
             header=0, # header row
             dtype=str, # string type 인식                            
