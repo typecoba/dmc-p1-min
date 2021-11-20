@@ -65,6 +65,10 @@ class ConfigRepository():
         epFormat = os.path.splitext(config[f'ep']['url'])[-1][1:]
         if epFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
             epFormat = config['ep']['format'] # config에 명시된 형식
+        
+        epUpdateFormat = os.path.splitext(config[f'ep_update']['url'])[-1][1:]
+        if epUpdateFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
+            epUpdateFormat = config['ep_update']['format'] # config에 명시된 형식
         #                
         if media in ['facebook', 'google'] : # 페북(tsv,csv,xml), 구글(tsv,xml)  *ep 공유하기도 하기때문에 tsv로 통일            
             feedFormat = 'tsv'
@@ -78,7 +82,7 @@ class ConfigRepository():
  
         # [ep]        
         epFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}.{epFormat}'
-        epUpdateFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}_update.{epFormat}'
+        epUpdateFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}_update.{epUpdateFormat}'
         config['ep']['fullPath'] = epFullPath
         if 'ep_update' in config : # ep_update 있는경우
             config['ep_update']['fullPath'] = epUpdateFullPath
@@ -86,6 +90,7 @@ class ConfigRepository():
         # [ep][segment]
         # ep단위로 feed갯수만큼 한번만 분할하여 catalog끼리 활용
         # *feed 갯수는 카탈로그끼리 동일해야함
+        '''
         segmentPath = []
         feedCount = len(config['catalog'][next(iter(config['catalog']))]['feed'])
         for i in range(feedCount) :
@@ -97,7 +102,7 @@ class ConfigRepository():
             for i in range(feedCount) :
                 segmentPath.append(os.path.dirname(epUpdateFullPath)+f'/segment_{i}_update.csv')
             config['ep_update']['segmentPath'] = segmentPath
-        
+        '''
 
         # [catalog][feed]
         for catalog_id, catalogDict in config['catalog'].items():

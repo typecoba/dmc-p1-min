@@ -26,7 +26,7 @@ class ConvertFilter():
         self.result = self.mediaFilter(self.result) # 매체별 공통 filter               
         self.result = self.customFilter(self.result) # 카탈로그별 filter
         return self.result
-
+    
     # 1. 공통 filter
     def commonFilter(self, dataframe=None):        
         dataframe.rename(columns=self.config['columns'], inplace=True) # key 수정            
@@ -191,12 +191,19 @@ class ConvertFilter():
 
 
         if self.config['info']['media'] == 'google' :
-            # hnsmall 카탈로그 관리자에서 처리한내용중 GMC용으로만 처리
-            if self.catalog_id in ['1044961502323589'] :
-                utm = '?channel_code=21173&utm_source=Google_DynamicRetargeting_Inactive&utm_medium=DA&utm_campaign=Dynamic'
-                dataframe['link'] = 'http://m.hnsmall.com/goods/view/' + dataframe['id'] + utm
-                dataframe['mobile_android_app_link'] = 'android-app://com.hnsmall/hnsmallapp/m.hnsmall.com/goods/view/' + dataframe['id'] + utm
-            
+            # hnsmall_update 증분처리만 간소화에서 진행 *카탈로그 관리자 조건과 동일 (2021.11.16)
+            if self.catalog_id in ['137258367'] :
+                dataframe['price'] = dataframe['price']+' KRW' # price
+                dataframe['condition'] = 'new' # condition
+                dataframe['availability'] = 'in stock' # availability
+                dataframe['shipping'] = 'KR:::'+dataframe['delivery_charge']+'.00 KRW' # shipping
+                utm = 'channel_code=21173&utm_source=Google_DynamicRetargeting_Inactive&utm_medium=DA&utm_campaign=Dynamic'
+                dataframe['link'] = 'http://www.hnsmall.com/display/goods.do?goods_code=' + dataframe['id'] + '&' + utm
+                dataframe['mobile_link'] = 'http://m.hnsmall.com/mktcpgn/goods/view/' + dataframe['id'] + '?' + utm
+                dataframe['product_type'] = dataframe['product_type'].replace(regex=r'&gt;', value='@')
+                dataframe['custom_label_0'] = '0' if str(dataframe['delivery_charge'])!='0' else '1' # custom_label_0
+                dataframe['web_should_fallback'] = 'TRUE' # web_should_fallback
+                    
             # ssg_aos
             if self.catalog_id == '449637976' :
                 android_app_link = 'ssg://execute/page_open/self?url=http://m.ssg.com/item/itemView.ssg?itemId='+ dataframe['id'] +'&gateYn=Y&mobilAppSvcNo=3'                
@@ -215,6 +222,8 @@ class ConvertFilter():
                 dataframe['price'] = dataframe["price"] + ' KRW'
                 dataframe['shipping'] = 'KR:::' +dataframe["shipping"]+ ' KRW'
 
+            
+
 
 
         if self.config['info']['media'] == 'criteo' :
@@ -228,7 +237,10 @@ class ConvertFilter():
 
 
     def makeProductType(self, dataframe):
-        result = pd.Series()        
+        result = pd.Series()
+        if 'product_type' in dataframe:
+            result = dataframe['product_type']
+
         if 'google_product_category' in dataframe :             
             # google_product_category 값 주는경우 변환
             # google_product_category 목록 - https://www.google.com/basepages/producttype/taxonomy-with-ids.ko-KR.txt
@@ -238,7 +250,7 @@ class ConvertFilter():
             productDict = dict(zip(productDF['num'].str.strip(), productDF['category'].str.strip())) # dict로 변환 [{'num':'category'}]            
             result = dataframe['google_product_category'].map(productDict) # 값 치환
 
-        else : # 없는경우        
+        if 'category_0' in dataframe : # category_0123 형식으로 들어오는 경우
             # category_1~4 연결해서 입력
             for i in range(4) : # 0-3                
                 if f'category_{i+1}' in dataframe :                    

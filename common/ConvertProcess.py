@@ -14,7 +14,7 @@ import numpy as np
 from datetime import datetime
 import time 
 # from tqdm import tqdm
-
+import xmltodict
 '''
 execute 단위로 비동기 코루틴 생성
 '''
@@ -83,57 +83,106 @@ class ConvertProcess():
         else :
             compression = 'infer'
 
-        columns = list(self.config['columns'].keys()) # 필요컬럼만         
+        columns = list(self.config['columns'].keys()) # 필요컬럼
         limit = self.config[f'ep{update_suffix}']['limit'] if 'limit' in self.config[f'ep{update_suffix}'] else None
         
-        # chunk load
-        ep_load = pd.read_csv(file_path,
-            nrows= limit, # row limit
-            chunksize=chunk_size,
-            header=0, # header row
-            dtype=str, # string type 인식                            
-            # converters={'id': lambda x: print(x)},
-            sep=seperator, # 명시
-            # lineterminator='\r',
-            compression=compression,
-            error_bad_lines=False, # error skip
-            usecols=columns, # chunk에도 컬럼명 표기
-            iterator=True,
-            encoding=encoding)
-        
-        
-        # make feed
-        loaded_cnt=0
-        for chunk_loop, chunk_df in enumerate(ep_load): # chunk load            
-            # catalog for            
-            for catalog_loop, catalog_id in enumerate(catalog_ids):                 
-                convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스
-                feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())                
-                                
-                # filter
-                feed_df = convertFilter.run(chunk_df)
 
-                # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
-                for feed_loop, feed_id in enumerate(feed_ids):                                        
-                    segment_df = feed_df[feed_df['id'].str[-2:].isin(segment_index[feed_loop])] # id끝자리 2자리수 비교
-                
-                    # write                
-                    feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
-                    is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함
-                    mode = 'w' if chunk_loop==0 else 'a' # 피드별 파일쓰기
-                    self.feedWrite(path=feed_path, mode=mode, df=segment_df, is_compression=is_compression)
+        if self.config[f'ep{update_suffix}']['format']=='xml' : # 정리필요
+            # xml_data = open(file_path, 'r', encoding=encoding).read()
+            with open(file_path, 'r', encoding=encoding) as f :
+                xml_dict = xmltodict.parse(f.read()) # xml to dict
             
-                # memory clean
-                del[[feed_df]]
-                gc.collect()    
-                                            
-            # log
-            loaded_cnt = loaded_cnt + chunk_df.shape[0]
-            self.logger.info(f'..{format(loaded_cnt,",")} row segmented')
+                tree = ['rss','channel','item'] # xml데이터 경로입력
+                items = []
+                for i,key in enumerate(tree) :
+                    if i==0:
+                        items = xml_dict.get(tree[i])
+                    else:
+                        items = items.get(tree[i])
 
-            # memory clean
-            del[[chunk_df]]
-            gc.collect()
+                # items = xml_dict['rss']['channel']['item']
+
+                renames = {}
+                for key in items[0].keys() :
+                    renames[key] = key.replace('g:','')
+                xml_df = pd.DataFrame([item for item in items]) # 데이터프레임으로 변환 columns 명시하면 NaN으로 나옴
+                xml_df = xml_df.rename(columns=renames, inplace=False) # rename으로 변경
+                xml_df = xml_df[columns] # 필요컬럼만
+                
+
+                # catalog for            
+                for catalog_loop, catalog_id in enumerate(catalog_ids):                 
+                    convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스
+                    feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())                
+                                    
+                    # filter
+                    feed_df = convertFilter.run(xml_df)                
+
+                    # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
+                    for feed_loop, feed_id in enumerate(feed_ids):                                        
+                        segment_df = feed_df[feed_df['id'].str[-2:].isin(segment_index[feed_loop])] # id끝자리 2자리수 비교
+                        print(segment_df[:3])
+                        # write                
+                        feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
+                        is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함
+                        mode = 'w' if catalog_loop==0 else 'a' # 피드별 파일쓰기
+                        self.feedWrite(path=feed_path, mode=mode, df=segment_df, is_compression=is_compression)
+                
+                    # memory clean
+                    del[[feed_df]]
+                    gc.collect()            
+                
+
+
+        else :            
+            # chunk load
+            ep_load = pd.read_csv(file_path,
+                nrows= limit, # row limit
+                chunksize=chunk_size,
+                header=0, # header row
+                dtype=str, # string type 인식                            
+                # converters={'id': lambda x: print(x)},
+                sep=seperator, # 명시
+                # lineterminator='\r',
+                compression=compression,
+                error_bad_lines=False, # error skip
+                usecols=columns, # chunk에도 컬럼명 표기
+                iterator=True,
+                encoding=encoding)
+            
+            
+            # make feed
+            loaded_cnt=0
+            for chunk_loop, chunk_df in enumerate(ep_load): # chunk load            
+                # catalog for            
+                for catalog_loop, catalog_id in enumerate(catalog_ids):                 
+                    convertFilter = ConvertFilter(self.config, catalog_id, is_update) # 필터 클래스
+                    feed_ids = list(self.config['catalog'][catalog_id]['feed'].keys())                
+                                    
+                    # filter
+                    feed_df = convertFilter.run(chunk_df)
+
+                    # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
+                    for feed_loop, feed_id in enumerate(feed_ids):                                        
+                        segment_df = feed_df[feed_df['id'].str[-2:].isin(segment_index[feed_loop])] # id끝자리 2자리수 비교
+                    
+                        # write                
+                        feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
+                        is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함
+                        mode = 'w' if chunk_loop==0 else 'a' # 피드별 파일쓰기
+                        self.feedWrite(path=feed_path, mode=mode, df=segment_df, is_compression=is_compression)
+                
+                    # memory clean
+                    del[[feed_df]]
+                    gc.collect()    
+                                                
+                # log
+                loaded_cnt = loaded_cnt + chunk_df.shape[0]
+                self.logger.info(f'..{format(loaded_cnt,",")} row segmented')
+
+                # memory clean
+                del[[chunk_df]]
+                gc.collect()
 
         # upload
         if is_upload and self.config['info']['media'] == 'facebook': # 운영서버 & facebook 피드인경우
