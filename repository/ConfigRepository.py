@@ -62,13 +62,19 @@ class ConfigRepository():
         epName = config['info']['name'] # 클라이언트명         
         media = config['info']['media'] # 매체        
         #
-        epFormat = os.path.splitext(config[f'ep']['url'])[-1][1:]
-        if epFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
-            epFormat = config['ep']['format'] # config에 명시된 형식
+        if 'ep' in config and config['ep']['url'] != '' :
+            epFormat = os.path.splitext(config[f'ep']['url'])[-1][1:]
+            if epFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
+                epFormat = config['ep']['format'] # config에 명시된 형식
+            epFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}.{epFormat}'
+            config['ep']['fullPath'] = epFullPath
         
-        epUpdateFormat = os.path.splitext(config[f'ep_update']['url'])[-1][1:]
-        if epUpdateFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
-            epUpdateFormat = config['ep_update']['format'] # config에 명시된 형식
+        if 'ep_update' in config and config['ep_update']['url'] != '' :
+            epUpdateFormat = os.path.splitext(config[f'ep_update']['url'])[-1][1:]
+            if epUpdateFormat not in ['gz','zip'] : # 압축된 파일이 아닌경우
+                epUpdateFormat = config['ep_update']['format'] # config에 명시된 형식
+            epUpdateFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}_update.{epUpdateFormat}'
+            config['ep_update']['fullPath'] = epUpdateFullPath
         #                
         if media in ['facebook', 'google'] : # 페북(tsv,csv,xml), 구글(tsv,xml)  *ep 공유하기도 하기때문에 tsv로 통일            
             feedFormat = 'tsv'
@@ -78,15 +84,8 @@ class ConfigRepository():
             zipFormat = ''
         #            
         dateDay = datetime.now().strftime('%Y%m%d')
-        dateMonth = datetime.now().strftime('%Y%m')
- 
-        # [ep]        
-        epFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}.{epFormat}'
-        epUpdateFullPath = f'{self.prop.getEpPath()}/{epName}/ep_{epName}_update.{epUpdateFormat}'
-        config['ep']['fullPath'] = epFullPath
-        if 'ep_update' in config : # ep_update 있는경우
-            config['ep_update']['fullPath'] = epUpdateFullPath
-
+        dateMonth = datetime.now().strftime('%Y%m')                         
+                    
         # [ep][segment]
         # ep단위로 feed갯수만큼 한번만 분할하여 catalog끼리 활용
         # *feed 갯수는 카탈로그끼리 동일해야함

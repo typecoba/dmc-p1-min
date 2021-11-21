@@ -121,7 +121,7 @@ class ConvertProcess():
                     # 피드갯수에 따라 ID 기준 세그먼트 분리하여 쓰기
                     for feed_loop, feed_id in enumerate(feed_ids):                                        
                         segment_df = feed_df[feed_df['id'].str[-2:].isin(segment_index[feed_loop])] # id끝자리 2자리수 비교
-                        print(segment_df[:3])
+                        
                         # write                
                         feed_path = self.config['catalog'][catalog_id]['feed'][feed_id][f'fullPath{update_suffix}'] # 최종 feed path
                         is_compression = True if self.config['info']['media'] != 'criteo' else False   # criteo는 압축안함
