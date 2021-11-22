@@ -33,7 +33,7 @@ class ConvertFilter():
         
         # 공백제거, result.apply(lambda x: x.str.strip(), axis=1) 로 돌리면 너무느림
         for key in list(dataframe.columns) :
-            dataframe[key] = dataframe[key].str.strip()
+            dataframe[key] = dataframe[key].apply(str).str.strip()
         # print(dataframe.columns)
 
         # include
@@ -197,7 +197,7 @@ class ConvertFilter():
                 dataframe['condition'] = 'new' # condition
                 dataframe['availability'] = 'in stock' # availability
                 dataframe['shipping'] = 'KR:::'+dataframe['delivery_charge']+'.00 KRW' # shipping
-                utm = 'channel_code=21173&utm_source=Google_DynamicRetargeting_Inactive&utm_medium=DA&utm_campaign=Dynamic'
+                utm = 'channel_code=21323&utm_source=Google_Shopping&utm_medium=SA&utm_campaign=Dynamic'
                 dataframe['link'] = 'http://www.hnsmall.com/display/goods.do?goods_code=' + dataframe['id'] + '&' + utm
                 dataframe['mobile_link'] = 'http://m.hnsmall.com/mktcpgn/goods/view/' + dataframe['id'] + '?' + utm
                 dataframe['product_type'] = dataframe['product_type'].replace(regex=r'&gt;', value='@')

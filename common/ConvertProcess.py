@@ -145,7 +145,7 @@ class ConvertProcess():
                 sep=seperator, # 명시
                 # lineterminator='\r',
                 compression=compression,
-                error_bad_lines=False, # error skip
+                on_bad_lines='skip', # error skip
                 usecols=columns, # chunk에도 컬럼명 표기
                 iterator=True,
                 encoding=encoding)
